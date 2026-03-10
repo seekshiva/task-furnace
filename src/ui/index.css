@@ -1,0 +1,230 @@
+:root {
+  color-scheme: dark;
+  --tf-bg: #020617;
+  --tf-bg-elevated: #020617;
+  --tf-bg-shell: #020617;
+  --tf-border-subtle: #1e293b;
+  --tf-accent: #38bdf8;
+  --tf-accent-soft: rgba(56, 189, 248, 0.12);
+  --tf-text: #e5e7eb;
+  --tf-text-muted: #64748b;
+  --tf-prefix: #22c55e;
+  --tf-prompt-user: #e5e7eb;
+  --tf-prompt-path: #38bdf8;
+  --tf-prompt-sign: #facc15;
+  --tf-radius-lg: 18px;
+  --tf-radius-md: 12px;
+  --tf-radius-sm: 8px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Mono",
+    Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: radial-gradient(circle at top left, #0b1120, #020617 55%, #020617);
+  color: var(--tf-text);
+}
+
+body {
+  display: flex;
+}
+
+.tf-app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 20px 24px 24px;
+  background:
+    radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.16), transparent 55%),
+    radial-gradient(circle at 100% 0, rgba(147, 51, 234, 0.12), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(34, 197, 94, 0.12), transparent 55%),
+    linear-gradient(145deg, #020617, #020617);
+}
+
+.tf-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px 12px;
+  border-radius: var(--tf-radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(120deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.88));
+  box-shadow:
+    0 22px 45px rgba(15, 23, 42, 0.75),
+    0 0 0 1px rgba(15, 23, 42, 0.9),
+    0 0 0 0.5px rgba(148, 163, 184, 0.35) inset;
+  backdrop-filter: blur(26px);
+}
+
+.tf-header-logo {
+  font-size: 18px;
+}
+
+.tf-header-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.tf-header-subtitle {
+  font-size: 12px;
+  color: var(--tf-text-muted);
+}
+
+.tf-main {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding-top: 18px;
+}
+
+.tf-shell-window {
+  width: min(960px, 100%);
+  max-width: 960px;
+  border-radius: var(--tf-radius-lg);
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.2), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow:
+    0 30px 80px rgba(15, 23, 42, 0.95),
+    0 0 0 1px rgba(15, 23, 42, 1),
+    0 0 45px rgba(8, 47, 73, 0.9);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tf-shell-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.9));
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.tf-shell-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.tf-shell-dots .dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9);
+}
+
+.dot-red {
+  background: radial-gradient(circle at 30% 30%, #fecaca, #ef4444);
+}
+
+.dot-amber {
+  background: radial-gradient(circle at 30% 30%, #fef3c7, #f59e0b);
+}
+
+.dot-green {
+  background: radial-gradient(circle at 30% 30%, #bbf7d0, #22c55e);
+}
+
+.tf-shell-title {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--tf-text-muted);
+}
+
+.tf-shell-body {
+  padding: 18px 18px 20px;
+  background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 1));
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  border-top: 1px solid rgba(15, 23, 42, 0.85);
+}
+
+.tf-shell-line {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tf-shell-line-muted {
+  color: var(--tf-text-muted);
+}
+
+.tf-prefix {
+  color: var(--tf-prefix);
+  min-width: 64px;
+}
+
+.tf-shell-prompt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(51, 65, 85, 0.9);
+}
+
+.tf-prompt-user {
+  color: var(--tf-prompt-user);
+}
+
+.tf-prompt-path {
+  color: var(--tf-prompt-path);
+}
+
+.tf-prompt-sign {
+  color: var(--tf-prompt-sign);
+}
+
+.tf-prompt-caret {
+  display: inline-block;
+  width: 8px;
+  height: 12px;
+  margin-left: 3px;
+  border-radius: 2px;
+  background: var(--tf-accent);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+  animation: tf-caret-blink 1.1s steps(1, end) infinite;
+}
+
+@keyframes tf-caret-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .tf-app {
+    padding: 14px 10px 16px;
+  }
+
+  .tf-shell-window {
+    border-radius: 16px;
+  }
+
+  .tf-shell-body {
+    padding-inline: 14px;
+  }
+}
+
