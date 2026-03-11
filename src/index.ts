@@ -184,8 +184,89 @@ const server = Bun.serve({
           return Response.json({ commits, aheadCount });
         } catch (error) {
           console.error("Failed to load commits for connector-service", error);
+          return new Response(JSON.stringify({ error: "Failed to load commits from connector-service" }), {
+            status: 500,
+          });
+        }
+      },
+    },
+    "/api/tower/commits/:hash/files": {
+      GET: async (req) => {
+        if (!connectorServicePath) {
           return new Response(
-            JSON.stringify({ error: "Failed to load commits from connector-service" }),
+            JSON.stringify({
+              error:
+                "CONNECTOR_SERVICE_PATH is not configured. Set it in .env to use the Tower view.",
+            }),
+            { status: 400 },
+          );
+        }
+
+        const { hash } = req.params;
+
+        try {
+          const [statusResult, numstatResult] = await Promise.all([
+            $`git -C ${connectorServicePath} show --name-status --format= ${hash}`,
+            $`git -C ${connectorServicePath} show --numstat --format= ${hash}`,
+          ]);
+
+          const statusLines = statusResult.stdout
+            .toString()
+            .trim()
+            .split("\n")
+            .filter(Boolean);
+
+          const numstatLines = numstatResult.stdout
+            .toString()
+            .trim()
+            .split("\n")
+            .filter(Boolean);
+
+          const statusMap = new Map<string, string>();
+
+          for (const line of statusLines) {
+            const parts = line.split(/\s+/, 2);
+            if (parts.length === 2) {
+              const status = parts[0] ?? "";
+              const path = parts[1] ?? "";
+              statusMap.set(path, status);
+            }
+          }
+
+          const files = numstatLines
+            .map((line) => {
+              const [additionsRaw, deletionsRaw, pathRaw] = line.split("\t");
+              const path = pathRaw ?? "";
+              if (!path) {
+                return null;
+              }
+
+              const additionsNumber = Number(additionsRaw);
+              const deletionsNumber = Number(deletionsRaw);
+
+              const additions =
+                additionsRaw === "-" || Number.isNaN(additionsNumber) ? 0 : additionsNumber;
+              const deletions =
+                deletionsRaw === "-" || Number.isNaN(deletionsNumber) ? 0 : deletionsNumber;
+              const status = statusMap.get(path) ?? "M";
+
+              return {
+                path,
+                status,
+                additions,
+                deletions,
+              };
+            })
+            .filter(
+              (file): file is { path: string; status: string; additions: number; deletions: number } =>
+                file !== null,
+            );
+
+          return Response.json({ files });
+        } catch (error) {
+          console.error(`Failed to load commit details for ${hash}`, error);
+          return new Response(
+            JSON.stringify({ error: "Failed to load commit details from connector-service" }),
             { status: 500 },
           );
         }
