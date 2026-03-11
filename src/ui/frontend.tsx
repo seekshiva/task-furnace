@@ -500,22 +500,25 @@ const SessionDetailPage: React.FC<{ sessionId: string; navigate: (path: string) 
   return (
     <section className="tf-shell-window">
       <div className="tf-shell-titlebar">
-        <div className="tf-shell-dots">
-          <span className="dot dot-red" />
-          <span className="dot dot-amber" />
-          <span className="dot dot-green" />
+        <div className="tf-shell-titlebar-left">
+          <div className="tf-shell-dots">
+            <span className="dot dot-red" />
+            <span className="dot dot-amber" />
+            <span className="dot dot-green" />
+          </div>
+          <button
+            type="button"
+            className="tf-shell-back"
+            onClick={() => navigate("/sessions")}
+            aria-label="Back to all sessions"
+          >
+            ←
+          </button>
         </div>
         <span className="tf-shell-title">session details</span>
       </div>
 
       <div className="tf-shell-body tf-sessions-body">
-        <button
-          type="button"
-          className="tf-back-link"
-          onClick={() => navigate("/sessions")}
-        >
-          ← Back to all sessions
-        </button>
 
         {loading && <div className="tf-sessions-muted">Loading session {sessionId}…</div>}
         {error && !loading && (
@@ -582,7 +585,6 @@ const SessionDetailPage: React.FC<{ sessionId: string; navigate: (path: string) 
             </div>
 
             <div className="tf-session-messages">
-              <h2 className="tf-session-messages-heading">Messages</h2>
               {loadingMessages && (
                 <div className="tf-sessions-muted">Loading messages…</div>
               )}
