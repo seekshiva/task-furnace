@@ -5,11 +5,16 @@ import "./index.css";
 type Route =
   | { type: "home" }
   | { type: "sessions" }
-  | { type: "session-detail"; sessionId: string };
+  | { type: "session-detail"; sessionId: string }
+  | { type: "tower" };
 
 function parseRoute(pathname: string): Route {
   if (pathname === "/sessions") {
     return { type: "sessions" };
+  }
+
+  if (pathname === "/tower") {
+    return { type: "tower" };
   }
 
   if (pathname.startsWith("/sessions/")) {
@@ -72,6 +77,13 @@ const App: React.FC = () => {
           >
             Sessions
           </button>
+          <button
+            type="button"
+            className={`tf-nav-link ${route.type === "tower" ? "tf-nav-link-active" : ""}`}
+            onClick={() => navigate("/tower")}
+          >
+            Tower
+          </button>
         </nav>
       </header>
 
@@ -81,6 +93,7 @@ const App: React.FC = () => {
         {route.type === "session-detail" && (
           <SessionDetailPage sessionId={route.sessionId} navigate={navigate} />
         )}
+        {route.type === "tower" && <TowerPage />}
       </main>
     </div>
   );
@@ -719,6 +732,123 @@ const SessionDetailPage: React.FC<{ sessionId: string; navigate: (path: string) 
               </div>
             </div>
           </>
+        )}
+      </div>
+    </section>
+  );
+};
+
+type TowerCommit = {
+  hash: string;
+  author: string;
+  date: string;
+  message: string;
+};
+
+const TowerPage: React.FC = () => {
+  const [commits, setCommits] = useState<TowerCommit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [aheadCount, setAheadCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch("/api/tower/commits");
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error || `Request failed with status ${res.status}`);
+        }
+        const body = (await res.json()) as {
+          commits?: TowerCommit[];
+          aheadCount?: number;
+        };
+        if (!cancelled) {
+          setCommits(body.commits ?? []);
+          setAheadCount(
+            typeof body.aheadCount === "number" && Number.isFinite(body.aheadCount)
+              ? body.aheadCount
+              : null,
+          );
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError((err as Error).message ?? "Failed to load commits");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <section className="tf-shell-window">
+      <div className="tf-shell-titlebar">
+        <div className="tf-shell-dots">
+          <span className="dot dot-red" />
+          <span className="dot dot-amber" />
+          <span className="dot dot-green" />
+        </div>
+        <span className="tf-shell-title">connector-service · tower</span>
+      </div>
+
+      <div className="tf-shell-body tf-sessions-body">
+        {loading && <div className="tf-sessions-muted">Loading recent commits…</div>}
+        {error && !loading && (
+          <div className="tf-sessions-error">
+            <div>Couldn&apos;t load commits.</div>
+            <div className="tf-sessions-error-raw">{error}</div>
+          </div>
+        )}
+
+        {!loading && !error && aheadCount !== null && (
+          <div className="tf-sessions-muted">
+            {aheadCount === 0
+              ? "No commits ahead of main. Current branch is up to date with main."
+              : `${aheadCount} commit${aheadCount === 1 ? "" : "s"} ahead of main.`}
+          </div>
+        )}
+
+        {!loading && !error && commits.length === 0 && aheadCount === null && (
+          <div className="tf-sessions-muted">No commits found (or repository is empty).</div>
+        )}
+
+        {!loading && !error && commits.length > 0 && (
+          <div className="tf-sessions-list-inner tf-tower-list">
+            {commits.map((commit) => (
+              <div key={commit.hash} className="tf-tower-row">
+                <div className="tf-tower-row-main">
+                  <div className="tf-tower-message">{commit.message}</div>
+                  <div className="tf-tower-meta">
+                    <span className="tf-tower-author">{commit.author}</span>
+                    <span className="tf-tower-date">
+                      {new Date(commit.date).toLocaleString()}
+                    </span>
+                    <span className="tf-tower-hash">{commit.hash.slice(0, 10)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {aheadCount !== null && (
+              <div className="tf-sessions-muted tf-tower-ahead-indicator">
+                Showing {commits.length} commit
+                {commits.length === 1 ? "" : "s"} ahead of main (total{" "}
+                {aheadCount}).
+              </div>
+            )}
+          </div>
         )}
       </div>
     </section>

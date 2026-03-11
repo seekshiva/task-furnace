@@ -1,4 +1,5 @@
 import indexHtml from "./ui/index.html";
+import { $ } from "bun";
 import { createOpencodeClient } from "@opencode-ai/sdk";
 
 // TODO: Implement TaskFurnace engine core and expose a public API from this module.
@@ -11,12 +12,15 @@ const opencodeClient = createOpencodeClient({
   baseUrl: opencodeBaseUrl,
 });
 
+const connectorServicePath = process.env.CONNECTOR_SERVICE_PATH;
+
 const server = Bun.serve({
   port,
   routes: {
     "/": indexHtml,
     "/sessions": indexHtml,
     "/sessions/:sessionId": indexHtml,
+    "/tower": indexHtml,
     "/api/projects": {
       GET: async () => {
         try {
@@ -138,6 +142,50 @@ const server = Bun.serve({
           console.error(`Failed to load opencode session messages for ${sessionId}`, error);
           return new Response(
             JSON.stringify({ error: "Failed to load session messages from opencode" }),
+            { status: 500 },
+          );
+        }
+      },
+    },
+    "/api/tower/commits": {
+      GET: async () => {
+        if (!connectorServicePath) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "CONNECTOR_SERVICE_PATH is not configured. Set it in .env to use the Tower view.",
+            }),
+            { status: 400 },
+          );
+        }
+
+        try {
+          // Show commits that are ahead of main for the current branch.
+          const { stdout } =
+            await $`git -C ${connectorServicePath} log main..HEAD --pretty=format:%H%x1f%an%x1f%ad%x1f%s --date=iso`;
+
+          const commits = stdout
+            .toString()
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => {
+              const [hash, author, date, message] = line.split("\x1f");
+              return {
+                hash,
+                author,
+                date,
+                message,
+              };
+            });
+
+          const aheadCount = commits.length;
+
+          return Response.json({ commits, aheadCount });
+        } catch (error) {
+          console.error("Failed to load commits for connector-service", error);
+          return new Response(
+            JSON.stringify({ error: "Failed to load commits from connector-service" }),
             { status: 500 },
           );
         }
