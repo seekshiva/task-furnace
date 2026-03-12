@@ -173,10 +173,65 @@ type SessionMessage = {
 type SessionStatusMap = Record<
   string,
   {
+    // Support both the typed opencode shape ({ type: "busy" | "retry" | "idle" })
+    // and the looser status/state strings used earlier.
+    type?: "idle" | "busy" | "retry" | string;
     status?: string | null;
     state?: string | null;
   }
 >;
+
+type SessionActivityMap = Record<
+  string,
+  {
+    state: "active" | "ready";
+    rawType: string | null;
+    lastEventAt: number | null;
+  }
+>;
+
+type NormalizedSessionStatus = {
+  type: "idle" | "busy" | "retry" | "unknown";
+  label: string | null;
+};
+
+function normalizeSessionStatus(
+  session: Session,
+  statusEntry: SessionStatusMap[string] | undefined,
+): NormalizedSessionStatus {
+  const rawType =
+    (statusEntry?.type as NormalizedSessionStatus["type"] | undefined) ??
+    (statusEntry?.state as string | undefined) ??
+    (statusEntry?.status as string | undefined) ??
+    (session.status as string | undefined) ??
+    null;
+
+  if (!rawType) {
+    // No explicit status from opencode – treat as ready/idle.
+    return { type: "idle", label: "ready" };
+  }
+
+  const lowered = rawType.toLowerCase();
+
+  if (lowered === "busy") {
+    return { type: "busy", label: "busy" };
+  }
+
+  if (lowered === "retry") {
+    return { type: "retry", label: "retrying" };
+  }
+
+  if (lowered === "idle") {
+    return { type: "idle", label: "idle" };
+  }
+
+  // Unknown string – keep label but treat as non-active.
+  return { type: "idle", label: rawType };
+}
+
+function isActiveSessionStatus(status: NormalizedSessionStatus): boolean {
+  return status.type === "busy" || status.type === "retry";
+}
 
 const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({ navigate }) => {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -186,6 +241,7 @@ const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({ navigate
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [sessionStatus, setSessionStatus] = useState<SessionStatusMap>({});
+   const [activity, setActivity] = useState<SessionActivityMap>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -196,10 +252,11 @@ const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({ navigate
         setError(null);
         setProjectError(null);
 
-        const [sessionsRes, projectsRes, statusRes] = await Promise.all([
+        const [sessionsRes, projectsRes, statusRes, activityRes] = await Promise.all([
           fetch("/api/sessions"),
           fetch("/api/projects"),
           fetch("/api/sessions/status"),
+          fetch("/api/sessions/activity"),
         ]);
 
         if (!sessionsRes.ok) {
@@ -222,6 +279,11 @@ const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({ navigate
           statusBody = (await statusRes.json()) as { status?: SessionStatusMap };
         }
 
+        let activityBody: { activity?: SessionActivityMap } | null = null;
+        if (activityRes.ok) {
+          activityBody = (await activityRes.json()) as { activity?: SessionActivityMap };
+        }
+
         if (!cancelled) {
           setSessions(body.sessions ?? []);
           if (projectsBody) {
@@ -232,6 +294,11 @@ const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({ navigate
             setSessionStatus(statusBody.status);
           } else {
             setSessionStatus({});
+          }
+          if (activityBody?.activity) {
+            setActivity(activityBody.activity);
+          } else {
+            setActivity({});
           }
         }
       } catch (err) {
@@ -251,6 +318,59 @@ const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({ navigate
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    // Lightweight polling so the board reflects status changes over time.
+    const interval = window.setInterval(() => {
+      void (async () => {
+        try {
+          const [sessionsRes, statusRes, activityRes] = await Promise.all([
+            fetch("/api/sessions"),
+            fetch("/api/sessions/status"),
+            fetch("/api/sessions/activity"),
+          ]);
+
+          if (sessionsRes.ok) {
+            const body = (await sessionsRes.json()) as { sessions?: Session[] };
+            setSessions(body.sessions ?? []);
+          }
+
+          if (statusRes.ok) {
+            const body = (await statusRes.json()) as { status?: SessionStatusMap };
+            setSessionStatus(body.status ?? {});
+          }
+
+          if (activityRes.ok) {
+            const body = (await activityRes.json()) as { activity?: SessionActivityMap };
+            setActivity(body.activity ?? {});
+          }
+        } catch {
+          // Best-effort refresh; keep existing state on failure.
+        }
+      })();
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const activeSessions: Session[] = [];
+  const readySessions: Session[] = [];
+
+  for (const session of sessions) {
+    const activityEntry = activity[session.id];
+    const isActiveFromActivity = activityEntry?.state === "active";
+
+    const normalized = normalizeSessionStatus(session, sessionStatus[session.id]);
+    const isActive = isActiveFromActivity || isActiveSessionStatus(normalized);
+
+    if (isActive) {
+      activeSessions.push(session);
+    } else {
+      readySessions.push(session);
+    }
+  }
 
   return (
     <section className="tf-shell-window">
@@ -323,39 +443,95 @@ const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({ navigate
               </div>
             )}
 
-            {sessions.length > 0 && (
-              <div className="tf-sessions-list-inner">
-                {sessions.map((session) => (
-                  <button
-                    key={session.id}
-                    type="button"
-                    className="tf-session-row"
-                    onClick={() => navigate(`/sessions/${session.id}`)}
-                  >
-                    <div className="tf-session-row-main">
-                      <div className="tf-session-title">
-                        {session.title || session.id.slice(0, 8)}
-                      </div>
-                      <div className="tf-session-meta">
-                        {(() => {
-                          const maybeStatus = sessionStatus[session.id];
-                          const statusLabel =
-                            maybeStatus?.state ?? maybeStatus?.status ?? session.status ?? null;
-                          if (!statusLabel) return null;
-                          return (
+            <div className="tf-kanban">
+              <div className="tf-kanban-column">
+                <div className="tf-kanban-column-header">
+                  <span className="tf-kanban-column-title">Active</span>
+                  <span className="tf-kanban-column-count">
+                    {activeSessions.length}
+                  </span>
+                </div>
+                <div className="tf-kanban-column-body">
+                  {activeSessions.length === 0 && (
+                    <div className="tf-sessions-muted tf-kanban-empty">
+                      No active sessions.
+                    </div>
+                  )}
+                  {activeSessions.map((session) => {
+                    const normalized = normalizeSessionStatus(
+                      session,
+                      sessionStatus[session.id],
+                    );
+                    const statusLabel = normalized.label ?? normalized.type;
+                    return (
+                      <button
+                        key={session.id}
+                        type="button"
+                        className="tf-session-row"
+                        onClick={() => navigate(`/sessions/${session.id}`)}
+                      >
+                        <div className="tf-session-row-main">
+                          <div className="tf-session-title">
+                            {session.title || session.id.slice(0, 8)}
+                          </div>
+                          <div className="tf-session-meta">
                             <span className="tf-session-status">
                               {statusLabel}
                             </span>
-                          );
-                        })()}
-                        <span className="tf-session-id">{session.id}</span>
-                      </div>
-                    </div>
-                    <div className="tf-session-chevron">›</div>
-                  </button>
-                ))}
+                            <span className="tf-session-id">{session.id}</span>
+                          </div>
+                        </div>
+                        <div className="tf-session-chevron">›</div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            )}
+
+              <div className="tf-kanban-column">
+                <div className="tf-kanban-column-header">
+                  <span className="tf-kanban-column-title">Ready</span>
+                  <span className="tf-kanban-column-count">
+                    {readySessions.length}
+                  </span>
+                </div>
+                <div className="tf-kanban-column-body">
+                  {readySessions.length === 0 && (
+                    <div className="tf-sessions-muted tf-kanban-empty">
+                      No ready sessions.
+                    </div>
+                  )}
+                  {readySessions.map((session) => {
+                    const normalized = normalizeSessionStatus(
+                      session,
+                      sessionStatus[session.id],
+                    );
+                    const statusLabel = normalized.label ?? normalized.type;
+                    return (
+                      <button
+                        key={session.id}
+                        type="button"
+                        className="tf-session-row"
+                        onClick={() => navigate(`/sessions/${session.id}`)}
+                      >
+                        <div className="tf-session-row-main">
+                          <div className="tf-session-title">
+                            {session.title || session.id.slice(0, 8)}
+                          </div>
+                          <div className="tf-session-meta">
+                            <span className="tf-session-status">
+                              {statusLabel}
+                            </span>
+                            <span className="tf-session-id">{session.id}</span>
+                          </div>
+                        </div>
+                        <div className="tf-session-chevron">›</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -376,6 +552,7 @@ const SessionDetailPage: React.FC<{ sessionId: string; navigate: (path: string) 
   const [input, setInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [sseSupported, setSseSupported] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -470,15 +647,61 @@ const SessionDetailPage: React.FC<{ sessionId: string; navigate: (path: string) 
   }, [sessionId]);
 
   useEffect(() => {
-    // Periodically refresh messages so updates from other clients show up.
-    const interval = window.setInterval(() => {
-      void reloadMessages(sessionId, { background: true });
-    }, 5000);
+    // Detect basic SSE support once on mount.
+    if (typeof window !== "undefined") {
+      setSseSupported(typeof window.EventSource !== "undefined");
+    }
+  }, []);
+
+  useEffect(() => {
+    // Prefer SSE streaming of events when supported; fall back to polling otherwise.
+    if (sseSupported === false) {
+      const interval = window.setInterval(() => {
+        void reloadMessages(sessionId, { background: true });
+      }, 5000);
+
+      return () => {
+        window.clearInterval(interval);
+      };
+    }
+
+    if (sseSupported === null || sseSupported === undefined) {
+      return;
+    }
+
+    const source = new EventSource("/api/opencode/events");
+
+    const handleEvent = (event: MessageEvent<string>) => {
+      try {
+        const data = JSON.parse(event.data) as {
+          type?: string;
+          properties?: { sessionID?: string };
+        };
+
+        if (!data || typeof data !== "object") return;
+
+        if (data.type === "session.status" || data.type === "message.updated") {
+          const eventSessionId = data.properties?.sessionID;
+          if (!eventSessionId || eventSessionId !== sessionId) return;
+          void reloadMessages(sessionId, { background: true });
+        }
+      } catch {
+        // Ignore malformed events.
+      }
+    };
+
+    source.addEventListener("message", handleEvent);
+
+    source.onerror = () => {
+      // Close SSE on error; polling effect will continue to run as a safety net.
+      source.close();
+    };
 
     return () => {
-      window.clearInterval(interval);
+      source.removeEventListener("message", handleEvent as EventListener);
+      source.close();
     };
-  }, [sessionId]);
+  }, [sessionId, sseSupported]);
 
   const handleSubmit = async (noReply: boolean) => {
     const text = input.trim();

@@ -14,6 +14,84 @@ const opencodeClient = createOpencodeClient({
 
 const connectorServicePath = process.env.CONNECTOR_SERVICE_PATH;
 
+type SessionActivityStatus = {
+  statusType: "busy" | "retry" | "idle" | "unknown";
+  rawType: string | null;
+  isActive: boolean;
+  lastEventAt: number | null;
+};
+
+const sessionActivity = new Map<string, SessionActivityStatus>();
+let eventsSubscribed = false;
+
+function updateSessionActivity(sessionID: string, statusType: string | null | undefined) {
+  const now = Date.now();
+  const lowered = (statusType ?? "").toLowerCase();
+
+  let normalized: SessionActivityStatus["statusType"] = "unknown";
+  let isActive = false;
+
+  if (lowered === "busy") {
+    normalized = "busy";
+    isActive = true;
+  } else if (lowered === "retry") {
+    normalized = "retry";
+    isActive = true;
+  } else if (lowered === "idle") {
+    normalized = "idle";
+    isActive = false;
+  } else {
+    normalized = "unknown";
+    isActive = false;
+  }
+
+  sessionActivity.set(sessionID, {
+    statusType: normalized,
+    rawType: statusType ?? null,
+    isActive,
+    lastEventAt: now,
+  });
+}
+
+async function startEventSubscription() {
+  if (eventsSubscribed) return;
+  eventsSubscribed = true;
+
+  try {
+    const result = await (opencodeClient as any).event.subscribe({
+      directory: undefined,
+      workspace: undefined,
+    });
+
+    for await (const event of (result as any).stream) {
+      try {
+        if (!event || typeof event !== "object") continue;
+        const type = (event as { type?: string }).type;
+
+        if (type === "session.status") {
+          const props = (event as { properties?: { sessionID?: string; status?: { type?: string } } })
+            .properties;
+          const sessionID = props?.sessionID;
+          const statusType = props?.status?.type;
+          if (!sessionID) continue;
+          updateSessionActivity(sessionID, statusType);
+        } else if (type === "session.idle") {
+          const props = (event as { properties?: { sessionID?: string } }).properties;
+          const sessionID = props?.sessionID;
+          if (!sessionID) continue;
+          updateSessionActivity(sessionID, "idle");
+        }
+      } catch (err) {
+        console.error("Failed to process opencode event", err);
+      }
+    }
+  } catch (error) {
+    console.error("Failed to subscribe to opencode events", error);
+    // Allow retry on next incoming request.
+    eventsSubscribed = false;
+  }
+}
+
 const server = Bun.serve({
   port,
   routes: {
@@ -145,6 +223,74 @@ const server = Bun.serve({
             { status: 500 },
           );
         }
+      },
+    },
+    "/api/sessions/activity": {
+      GET: async () => {
+        // Lazily start subscription on first use.
+        void startEventSubscription();
+
+        const now = Date.now();
+        const timeoutMs = 5 * 60 * 1000;
+        const activity: Record<
+          string,
+          { state: "active" | "ready"; rawType: string | null; lastEventAt: number | null }
+        > = {};
+
+        for (const [sessionID, status] of sessionActivity.entries()) {
+          let isActive = status.isActive;
+          if (isActive && status.lastEventAt !== null && now - status.lastEventAt > timeoutMs) {
+            isActive = false;
+          }
+
+          activity[sessionID] = {
+            state: isActive ? "active" : "ready",
+            rawType: status.rawType,
+            lastEventAt: status.lastEventAt,
+          };
+        }
+
+        return Response.json({ activity });
+      },
+    },
+    "/api/opencode/events": {
+      GET: async () => {
+        const encoder = new TextEncoder();
+
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              const result = await (opencodeClient as any).event.subscribe({
+                directory: undefined,
+                workspace: undefined,
+              });
+
+              // result.stream is an async generator of events; forward as SSE.
+              for await (const event of (result as any).stream) {
+                const payload = JSON.stringify(event);
+                const chunk = encoder.encode(`data: ${payload}\n\n`);
+                controller.enqueue(chunk);
+              }
+
+              controller.close();
+            } catch (error) {
+              console.error("Failed to proxy opencode events", error);
+              try {
+                controller.close();
+              } catch {
+                // ignore
+              }
+            }
+          },
+        });
+
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+        });
       },
     },
     "/api/tower/commits": {
