@@ -4,6 +4,7 @@ import {
   normalizeSessionStatus,
   isActiveSessionStatus,
 } from "./types";
+import { formatDisplayDate } from "../date";
 import type { Session, SessionStatusMap, SessionActivityMap } from "./types";
 
 const shellBodyClassName =
@@ -24,19 +25,6 @@ const emptyPaneClassName =
   "flex flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-400";
 
 const columnBodyClassName = "mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1";
-
-function formatSessionCreatedAt(createdAt?: string | null): string | null {
-  if (!createdAt) {
-    return null;
-  }
-
-  const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.toLocaleString();
-}
 
 export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
   navigate,
@@ -215,7 +203,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                         sessionStatus[session.id],
                       );
                       const statusLabel = normalized.label ?? normalized.type;
-                      const createdLabel = formatSessionCreatedAt(getSessionCreatedAt(session));
+                      const createdLabel = formatDisplayDate(getSessionCreatedAt(session));
                       return (
                         <button
                           key={session.id}
@@ -264,7 +252,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                         sessionStatus[session.id],
                       );
                       const statusLabel = normalized.label ?? normalized.type;
-                      const createdLabel = formatSessionCreatedAt(getSessionCreatedAt(session));
+                      const createdLabel = formatDisplayDate(getSessionCreatedAt(session));
                       return (
                         <button
                           key={session.id}

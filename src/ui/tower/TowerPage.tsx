@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatDisplayDate } from "../date";
 
 type TowerCommit = {
   hash: string;
@@ -210,7 +211,7 @@ export const TowerPage: React.FC = () => {
                         <div className="flex flex-wrap gap-2 text-xs text-slate-500">
                           <span>{commit.author}</span>
                           <span>
-                            {new Date(commit.date).toLocaleString()}
+                            {formatDisplayDate(commit.date)}
                           </span>
                           <span className="font-mono">{commit.hash.slice(0, 10)}</span>
                         </div>
@@ -240,7 +241,7 @@ export const TowerPage: React.FC = () => {
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs text-slate-500">
                       <span>{selectedCommit.author}</span>
-                      <span>{new Date(selectedCommit.date).toLocaleString()}</span>
+                      <span>{formatDisplayDate(selectedCommit.date)}</span>
                       <span className="font-mono">{selectedCommit.hash.slice(0, 10)}</span>
                     </div>
                   </div>

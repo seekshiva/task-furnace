@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getSessionCreatedAt, getSessionUpdatedAt } from "./types";
+import { formatDisplayDate } from "../date";
 import type { Session, SessionMessage } from "./types";
 
 const shellBodyClassName =
@@ -284,7 +285,7 @@ export const SessionDetailPage: React.FC<{
                 <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
                   <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Created</span>
                   <span className="min-w-0 flex-1 break-words">
-                    {new Date(createdAt).toLocaleString()}
+                    {formatDisplayDate(createdAt)}
                   </span>
                 </div>
               )}
@@ -294,7 +295,7 @@ export const SessionDetailPage: React.FC<{
                     Last updated
                   </span>
                   <span className="min-w-0 flex-1 break-words">
-                    {new Date(updatedAt).toLocaleString()}
+                    {formatDisplayDate(updatedAt)}
                   </span>
                 </div>
               )}
@@ -322,9 +323,7 @@ export const SessionDetailPage: React.FC<{
                   className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-[18px] border border-slate-200 bg-slate-100 p-1"
                 >
                   {messages.map((msg) => {
-                    const created = msg.info.createdAt
-                      ? new Date(msg.info.createdAt).toLocaleTimeString()
-                      : null;
+                    const created = formatDisplayDate(msg.info.createdAt);
                     const textPart = msg.parts.find(
                       (p) => p.type === "text",
                     ) as { type: "text"; text: string } | undefined;
