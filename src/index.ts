@@ -123,12 +123,14 @@ const server = Bun.serve({
     "/api/sessions/status": {
       GET: async () => {
         try {
-          const url = new URL("/session/status", opencodeBaseUrl);
-          const res = await fetch(url);
-          if (!res.ok) {
-            throw new Error(`Request failed with status ${res.status}`);
+          const params: { directory?: string } = {};
+          if (connectorServicePath) {
+            params.directory = connectorServicePath;
           }
-          const body = await res.json();
+
+          const result = await (opencodeClient as any).session.status(params);
+          const body = (result as any).data ?? result;
+
           return Response.json({ status: body });
         } catch (error) {
           console.error("Failed to load opencode session status", error);
