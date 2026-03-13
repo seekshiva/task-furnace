@@ -256,33 +256,69 @@ const server = Bun.serve({
       },
     },
     "/api/opencode/events": {
-      GET: async () => {
+      GET: async (request) => {
         const encoder = new TextEncoder();
+        const upstreamAbortController = new AbortController();
+        let streamClosed = false;
+        const markClosed = () => {
+          if (streamClosed) return;
+          streamClosed = true;
+          upstreamAbortController.abort();
+        };
+
+        if (request.signal.aborted) {
+          markClosed();
+        } else {
+          request.signal.addEventListener("abort", markClosed, { once: true });
+        }
 
         const stream = new ReadableStream({
           async start(controller) {
-            try {
-              const result = await (opencodeClient as any).event.subscribe({
-                directory: undefined,
-                workspace: undefined,
-              });
-
-              // result.stream is an async generator of events; forward as SSE.
-              for await (const event of (result as any).stream) {
-                const payload = JSON.stringify(event);
-                const chunk = encoder.encode(`data: ${payload}\n\n`);
-                controller.enqueue(chunk);
-              }
-
-              controller.close();
-            } catch (error) {
-              console.error("Failed to proxy opencode events", error);
+            const safeClose = () => {
+              if (streamClosed) return;
+              streamClosed = true;
               try {
                 controller.close();
               } catch {
                 // ignore
               }
+            };
+
+            try {
+              const result = await (opencodeClient as any).event.subscribe({
+                directory: undefined,
+                workspace: undefined,
+                signal: upstreamAbortController.signal,
+              });
+
+              // result.stream is an async generator of events; forward as SSE.
+              for await (const event of (result as any).stream) {
+                if (streamClosed || upstreamAbortController.signal.aborted) break;
+
+                const payload = JSON.stringify(event);
+                const chunk = encoder.encode(`data: ${payload}\n\n`);
+
+                try {
+                  controller.enqueue(chunk);
+                } catch {
+                  markClosed();
+                  break;
+                }
+              }
+
+              safeClose();
+            } catch (error) {
+              if (!upstreamAbortController.signal.aborted) {
+                console.error("Failed to proxy opencode events", error);
+              }
+              safeClose();
+            } finally {
+              request.signal.removeEventListener("abort", markClosed);
+              markClosed();
             }
+          },
+          cancel() {
+            markClosed();
           },
         });
 
