@@ -246,10 +246,6 @@ export const SessionDetailPage: React.FC<{
                   {session.title || "Untitled session"}
                 </span>
               </div>
-              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">ID</span>
-                <span className="min-w-0 flex-1 break-all font-mono">{session.id}</span>
-              </div>
               {session.status && (
                 <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
                   <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Status</span>
