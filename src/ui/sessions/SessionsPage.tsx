@@ -16,21 +16,21 @@ const errorClassName =
   "flex flex-col gap-1 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-[14px] text-rose-700";
 
 const sessionRowClassName =
-  "flex w-full cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left text-inherit shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:-translate-y-px hover:border-blue-200 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)] max-md:flex-col max-md:items-start";
+  "flex w-full shrink-0 cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left text-inherit shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:-translate-y-px hover:border-blue-200 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)] max-md:flex-col max-md:items-start";
 
 const columnClassName =
-  "flex h-full min-h-0 min-w-[280px] shrink-0 self-stretch rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:w-[280px] lg:w-[364px] lg:min-w-[364px]";
+  "flex min-h-[240px] min-w-[280px] shrink-0 self-stretch rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:w-[280px] lg:w-[364px] lg:min-w-[364px]";
 
 const emptyPaneClassName =
-  "flex flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-400";
+  "flex min-h-[96px] flex-1 shrink-0 items-center justify-center rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-400";
 
 const columnBodyClassName = "mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1";
 
 const groupClassName =
-  "flex flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-slate-50/70";
+  "flex shrink-0 flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-slate-50/70";
 
 const groupHeaderButtonClassName =
-  "flex w-full items-center justify-between gap-3 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50";
+  "flex w-full shrink-0 items-center justify-between gap-3 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50";
 
 type SessionColumnKey = "drafts" | "active" | "ready" | "done";
 
