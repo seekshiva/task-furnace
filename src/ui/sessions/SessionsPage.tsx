@@ -16,6 +16,12 @@ const errorClassName =
 const sessionRowClassName =
   "flex w-full cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left text-inherit shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:-translate-y-px hover:border-blue-200 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)] max-md:flex-col max-md:items-start";
 
+const columnClassName =
+  "flex h-full min-h-[320px] w-[280px] min-w-[280px] shrink-0 flex-col gap-2 self-stretch rounded-[18px] border border-slate-200 bg-slate-50 p-3";
+
+const emptyPaneClassName =
+  "flex flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-400";
+
 export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
   navigate,
 }) => {
@@ -141,7 +147,6 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
   return (
     <section className="flex min-h-0 w-full flex-1 flex-col">
       <div className={shellBodyClassName}>
-        <div className="text-sm font-semibold text-slate-900">Sessions</div>
         {loading && <div className={mutedTextClassName}>Loading sessions from opencode…</div>}
         {error && !loading && (
           <div className={errorClassName}>
@@ -158,9 +163,19 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
         )}
 
         {!loading && !error && (
-          <div className="flex flex-col gap-2.5">
-            <div className="grid items-stretch gap-3 md:grid-cols-2">
-              <div className="flex flex-col gap-2 rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+          <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+            <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden pb-2">
+              <div className={columnClassName}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-slate-900">Drafts</span>
+                  <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
+                    0
+                  </span>
+                </div>
+                <div className={emptyPaneClassName}>No items yet.</div>
+              </div>
+
+              <div className={columnClassName}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-bold text-slate-900">Active</span>
                   <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
@@ -204,7 +219,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+              <div className={columnClassName}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-bold text-slate-900">Ready</span>
                   <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
@@ -246,6 +261,16 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                     );
                   })}
                 </div>
+              </div>
+
+              <div className={columnClassName}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-slate-900">Done</span>
+                  <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
+                    0
+                  </span>
+                </div>
+                <div className={emptyPaneClassName}>No items yet.</div>
               </div>
             </div>
           </div>
