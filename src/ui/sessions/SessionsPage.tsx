@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
-  Session,
-  Project,
-  SessionStatusMap,
-  SessionActivityMap,
   normalizeSessionStatus,
   isActiveSessionStatus,
 } from "./types";
+import type { Session, SessionStatusMap, SessionActivityMap } from "./types";
 
 export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
   navigate,
@@ -14,9 +11,6 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [projectError, setProjectError] = useState<string | null>(null);
   const [sessionStatus, setSessionStatus] = useState<SessionStatusMap>({});
   const [activity, setActivity] = useState<SessionActivityMap>({});
 
@@ -27,11 +21,9 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
       try {
         setLoading(true);
         setError(null);
-        setProjectError(null);
 
-        const [sessionsRes, projectsRes, statusRes, activityRes] = await Promise.all([
+        const [sessionsRes, statusRes, activityRes] = await Promise.all([
           fetch("/api/sessions"),
-          fetch("/api/projects"),
           fetch("/api/sessions/status"),
           fetch("/api/sessions/activity"),
         ]);
@@ -40,17 +32,6 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
           throw new Error(`Sessions request failed with status ${sessionsRes.status}`);
         }
         const body = (await sessionsRes.json()) as { sessions?: Session[] };
-
-        let projectsBody: { projects?: Project[]; current?: Project | null } | null =
-          null;
-        if (projectsRes.ok) {
-          projectsBody = (await projectsRes.json()) as {
-            projects?: Project[];
-            current?: Project | null;
-          };
-        } else {
-          setProjectError(`Projects request failed with status ${projectsRes.status}`);
-        }
 
         let statusBody: { status?: SessionStatusMap } | null = null;
         if (statusRes.ok) {
@@ -64,10 +45,6 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
 
         if (!cancelled) {
           setSessions(body.sessions ?? []);
-          if (projectsBody) {
-            setProjects(projectsBody.projects ?? []);
-            setCurrentProject(projectsBody.current ?? null);
-          }
           if (statusBody?.status) {
             setSessionStatus(statusBody.status);
           } else {
@@ -173,54 +150,12 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
           </div>
         )}
 
-        {!loading && !error && !currentProject && sessions.length === 0 && (
+        {!loading && !error && sessions.length === 0 && (
           <div className="tf-sessions-muted">No sessions found yet.</div>
         )}
 
         {!loading && !error && (
           <div className="tf-sessions-list">
-            {projects.length > 0 && (
-              <div className="tf-project-summary">
-                <div className="tf-project-summary-header">
-                  <span className="tf-project-summary-label">Projects</span>
-                  <span className="tf-project-summary-count">
-                    {projects.length} project{projects.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <div className="tf-project-summary-body">
-                  {projects.map((project) => {
-                    const isCurrent = currentProject && project.id === currentProject.id;
-                    const dir =
-                      project.directory ??
-                      (project as { root?: string | null }).root ??
-                      (project as { path?: string | null }).path ??
-                      null;
-                    return (
-                      <div key={project.id} className="tf-project-row">
-                        <div className="tf-project-row-main">
-                          <span className="tf-project-summary-name">
-                            {dir || project.name || project.id}
-                          </span>
-                          {project.name && project.name !== dir && (
-                            <span className="tf-project-summary-dir">{project.name}</span>
-                          )}
-                        </div>
-                        {isCurrent && (
-                          <span className="tf-project-current-pill">current</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {projectError && (
-                  <div className="tf-sessions-error tf-project-summary-error">
-                    <div>Couldn&apos;t load full project list.</div>
-                    <div className="tf-sessions-error-raw">{projectError}</div>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="tf-kanban">
               <div className="tf-kanban-column">
                 <div className="tf-kanban-column-header">
