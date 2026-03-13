@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Session, SessionMessage } from "./types";
+import type { Session, SessionMessage } from "./types";
 
 export const SessionDetailPage: React.FC<{
   sessionId: string;
@@ -199,26 +199,18 @@ export const SessionDetailPage: React.FC<{
 
   return (
     <section className="tf-shell-window">
-      <div className="tf-shell-titlebar">
-        <div className="tf-shell-titlebar-left">
-          <div className="tf-shell-dots">
-            <span className="dot dot-red" />
-            <span className="dot dot-amber" />
-            <span className="dot dot-green" />
-          </div>
+      <div className="tf-shell-body tf-sessions-body">
+        <div className="tf-page-toolbar">
           <button
             type="button"
-            className="tf-shell-back"
+            className="tf-back-link"
             onClick={() => navigate("/sessions")}
             aria-label="Back to all sessions"
           >
-            ←
+            ← Back to sessions
           </button>
+          <div className="tf-page-title">Session details</div>
         </div>
-        <span className="tf-shell-title">session details</span>
-      </div>
-
-      <div className="tf-shell-body tf-sessions-body">
         {loading && <div className="tf-sessions-muted">Loading session {sessionId}…</div>}
         {error && !loading && (
           <div className="tf-sessions-error">

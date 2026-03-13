@@ -129,16 +129,8 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
 
   return (
     <section className="tf-shell-window">
-      <div className="tf-shell-titlebar">
-        <div className="tf-shell-dots">
-          <span className="dot dot-red" />
-          <span className="dot dot-amber" />
-          <span className="dot dot-green" />
-        </div>
-        <span className="tf-shell-title">opencode sessions</span>
-      </div>
-
       <div className="tf-shell-body tf-sessions-body">
+        <div className="tf-page-title">Sessions</div>
         {loading && <div className="tf-sessions-muted">Loading sessions from opencode…</div>}
         {error && !loading && (
           <div className="tf-sessions-error">

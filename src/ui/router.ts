@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 export type Route =
-  | { type: "home" }
   | { type: "sessions" }
   | { type: "session-detail"; sessionId: string }
   | { type: "tower" };
@@ -22,7 +21,7 @@ export function parseRoute(pathname: string): Route {
     }
   }
 
-  return { type: "home" };
+  return { type: "sessions" };
 }
 
 export function useRoute(): [Route, (path: string) => void] {

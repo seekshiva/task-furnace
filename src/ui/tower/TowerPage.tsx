@@ -140,16 +140,8 @@ export const TowerPage: React.FC = () => {
 
   return (
     <section className="tf-shell-window">
-      <div className="tf-shell-titlebar">
-        <div className="tf-shell-dots">
-          <span className="dot dot-red" />
-          <span className="dot dot-amber" />
-          <span className="dot dot-green" />
-        </div>
-        <span className="tf-shell-title">connector-service · tower</span>
-      </div>
-
       <div className="tf-shell-body tf-sessions-body">
+        <div className="tf-page-title">Tower</div>
         {loading && <div className="tf-sessions-muted">Loading recent commits…</div>}
         {error && !loading && (
           <div className="tf-sessions-error">

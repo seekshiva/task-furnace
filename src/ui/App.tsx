@@ -1,6 +1,5 @@
 import React from "react";
-import { Route, useRoute } from "./router";
-import { HomeConsole } from "./HomeConsole";
+import { useRoute } from "./router";
 import { SessionsPage } from "./sessions/SessionsPage";
 import { SessionDetailPage } from "./sessions/SessionDetailPage";
 import { TowerPage } from "./tower/TowerPage";
@@ -24,13 +23,6 @@ export const App: React.FC = () => {
         <nav className="tf-nav">
           <button
             type="button"
-            className={`tf-nav-link ${route.type === "home" ? "tf-nav-link-active" : ""}`}
-            onClick={() => navigate("/")}
-          >
-            Console
-          </button>
-          <button
-            type="button"
             className={`tf-nav-link ${isSessionsRoute ? "tf-nav-link-active" : ""}`}
             onClick={() => navigate("/sessions")}
           >
@@ -47,7 +39,6 @@ export const App: React.FC = () => {
       </header>
 
       <main className="tf-main">
-        {route.type === "home" && <HomeConsole />}
         {route.type === "sessions" && <SessionsPage navigate={navigate} />}
         {route.type === "session-detail" && (
           <SessionDetailPage sessionId={route.sessionId} navigate={navigate} />
