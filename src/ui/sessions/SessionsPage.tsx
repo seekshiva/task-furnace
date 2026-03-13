@@ -17,10 +17,12 @@ const sessionRowClassName =
   "flex w-full cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left text-inherit shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:-translate-y-px hover:border-blue-200 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)] max-md:flex-col max-md:items-start";
 
 const columnClassName =
-  "flex h-full min-h-[320px] w-[280px] min-w-[280px] shrink-0 flex-col gap-2 self-stretch rounded-[18px] border border-slate-200 bg-slate-50 p-3";
+  "flex h-full min-h-0 min-w-[280px] shrink-0 self-stretch rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:w-[280px] lg:w-[364px] lg:min-w-[364px]";
 
 const emptyPaneClassName =
   "flex flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-400";
+
+const columnBodyClassName = "mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1";
 
 export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
   navigate,
@@ -166,111 +168,123 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
           <div className="flex min-h-0 flex-1 flex-col gap-2.5">
             <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden pb-2">
               <div className={columnClassName}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold text-slate-900">Drafts</span>
-                  <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
-                    0
-                  </span>
-                </div>
-                <div className={emptyPaneClassName}>No items yet.</div>
-              </div>
-
-              <div className={columnClassName}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold text-slate-900">Active</span>
-                  <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
-                    {activeSessions.length}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {activeSessions.length === 0 && (
-                    <div className="rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-500">
-                      No active sessions.
-                    </div>
-                  )}
-                  {activeSessions.map((session) => {
-                    const normalized = normalizeSessionStatus(
-                      session,
-                      sessionStatus[session.id],
-                    );
-                    const statusLabel = normalized.label ?? normalized.type;
-                    return (
-                      <button
-                        key={session.id}
-                        type="button"
-                        className={sessionRowClassName}
-                        onClick={() => navigate(`/sessions/${session.id}`)}
-                      >
-                        <div className="flex min-w-0 flex-col gap-1">
-                          <div className="text-sm font-semibold text-slate-900">
-                            {session.title || session.id.slice(0, 8)}
-                          </div>
-                          <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                              {statusLabel}
-                            </span>
-                            <span className="font-mono">{session.id}</span>
-                          </div>
-                        </div>
-                        <div className="shrink-0 text-lg text-slate-400">›</div>
-                      </button>
-                    );
-                  })}
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-slate-900">Drafts</span>
+                    <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
+                      0
+                    </span>
+                  </div>
+                  <div className={columnBodyClassName}>
+                    <div className={emptyPaneClassName}>No items yet.</div>
+                  </div>
                 </div>
               </div>
 
               <div className={columnClassName}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold text-slate-900">Ready</span>
-                  <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
-                    {readySessions.length}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {readySessions.length === 0 && (
-                    <div className="rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-500">
-                      No ready sessions.
-                    </div>
-                  )}
-                  {readySessions.map((session) => {
-                    const normalized = normalizeSessionStatus(
-                      session,
-                      sessionStatus[session.id],
-                    );
-                    const statusLabel = normalized.label ?? normalized.type;
-                    return (
-                      <button
-                        key={session.id}
-                        type="button"
-                        className={sessionRowClassName}
-                        onClick={() => navigate(`/sessions/${session.id}`)}
-                      >
-                        <div className="flex min-w-0 flex-col gap-1">
-                          <div className="text-sm font-semibold text-slate-900">
-                            {session.title || session.id.slice(0, 8)}
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-slate-900">Active</span>
+                    <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
+                      {activeSessions.length}
+                    </span>
+                  </div>
+                  <div className={columnBodyClassName}>
+                    {activeSessions.length === 0 && (
+                      <div className="rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-500">
+                        No active sessions.
+                      </div>
+                    )}
+                    {activeSessions.map((session) => {
+                      const normalized = normalizeSessionStatus(
+                        session,
+                        sessionStatus[session.id],
+                      );
+                      const statusLabel = normalized.label ?? normalized.type;
+                      return (
+                        <button
+                          key={session.id}
+                          type="button"
+                          className={sessionRowClassName}
+                          onClick={() => navigate(`/sessions/${session.id}`)}
+                        >
+                          <div className="flex min-w-0 flex-col gap-1">
+                            <div className="text-sm font-semibold text-slate-900">
+                              {session.title || session.id.slice(0, 8)}
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                {statusLabel}
+                              </span>
+                              <span className="font-mono">{session.id}</span>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                              {statusLabel}
-                            </span>
-                            <span className="font-mono">{session.id}</span>
-                          </div>
-                        </div>
-                        <div className="shrink-0 text-lg text-slate-400">›</div>
-                      </button>
-                    );
-                  })}
+                          <div className="shrink-0 text-lg text-slate-400">›</div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
               <div className={columnClassName}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold text-slate-900">Done</span>
-                  <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
-                    0
-                  </span>
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-slate-900">Ready</span>
+                    <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
+                      {readySessions.length}
+                    </span>
+                  </div>
+                  <div className={columnBodyClassName}>
+                    {readySessions.length === 0 && (
+                      <div className="rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-500">
+                        No ready sessions.
+                      </div>
+                    )}
+                    {readySessions.map((session) => {
+                      const normalized = normalizeSessionStatus(
+                        session,
+                        sessionStatus[session.id],
+                      );
+                      const statusLabel = normalized.label ?? normalized.type;
+                      return (
+                        <button
+                          key={session.id}
+                          type="button"
+                          className={sessionRowClassName}
+                          onClick={() => navigate(`/sessions/${session.id}`)}
+                        >
+                          <div className="flex min-w-0 flex-col gap-1">
+                            <div className="text-sm font-semibold text-slate-900">
+                              {session.title || session.id.slice(0, 8)}
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                {statusLabel}
+                              </span>
+                              <span className="font-mono">{session.id}</span>
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-lg text-slate-400">›</div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className={emptyPaneClassName}>No items yet.</div>
+              </div>
+
+              <div className={columnClassName}>
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-slate-900">Done</span>
+                    <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
+                      0
+                    </span>
+                  </div>
+                  <div className={columnBodyClassName}>
+                    <div className={emptyPaneClassName}>No items yet.</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
