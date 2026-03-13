@@ -27,10 +27,10 @@ const emptyPaneClassName =
 const columnBodyClassName = "mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1";
 
 const groupClassName =
-  "flex shrink-0 flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-slate-50/70";
+  "relative flex shrink-0 flex-col overflow-visible rounded-[18px] border border-slate-200 bg-slate-50/70";
 
 const groupHeaderButtonClassName =
-  "flex w-full shrink-0 items-center justify-between gap-3 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50";
+  "sticky top-0 z-10 flex w-full shrink-0 items-center justify-between gap-3 bg-white/95 px-3 py-2.5 text-left backdrop-blur-sm transition hover:bg-slate-50";
 
 type SessionColumnKey = "drafts" | "active" | "ready" | "done";
 
@@ -392,7 +392,9 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                 <div key={group.key} className={groupClassName}>
                   <button
                     type="button"
-                    className={groupHeaderButtonClassName}
+                    className={`${groupHeaderButtonClassName} ${
+                      isExpanded ? "rounded-t-[18px]" : "rounded-[18px]"
+                    }`}
                     onClick={() =>
                       setExpandedGroups((previous) => ({
                         ...previous,
