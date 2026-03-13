@@ -5,6 +5,17 @@ import {
 } from "./types";
 import type { Session, SessionStatusMap, SessionActivityMap } from "./types";
 
+const shellBodyClassName =
+  "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-[18px] text-[13px] leading-[1.55] shadow-[0_16px_40px_rgba(15,23,42,0.08)] max-md:px-[14px] max-md:py-[14px]";
+
+const mutedTextClassName = "text-[13px] text-slate-500";
+
+const errorClassName =
+  "flex flex-col gap-1 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-[14px] text-rose-700";
+
+const sessionRowClassName =
+  "flex w-full cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left text-inherit shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:-translate-y-px hover:border-blue-200 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)] max-md:flex-col max-md:items-start";
+
 export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
   navigate,
 }) => {
@@ -128,37 +139,37 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
   }
 
   return (
-    <section className="tf-shell-window">
-      <div className="tf-shell-body tf-sessions-body">
-        <div className="tf-page-title">Sessions</div>
-        {loading && <div className="tf-sessions-muted">Loading sessions from opencode…</div>}
+    <section className="flex min-h-0 w-full flex-1 flex-col">
+      <div className={shellBodyClassName}>
+        <div className="text-sm font-semibold text-slate-900">Sessions</div>
+        {loading && <div className={mutedTextClassName}>Loading sessions from opencode…</div>}
         {error && !loading && (
-          <div className="tf-sessions-error">
+          <div className={errorClassName}>
             <div>Couldn&apos;t load sessions.</div>
-            <div className="tf-sessions-error-hint">
+            <div className="text-amber-700">
               Make sure <code>opencode web</code> is running, then refresh this page.
             </div>
-            <div className="tf-sessions-error-raw">{error}</div>
+            <div className="text-xs text-amber-700">{error}</div>
           </div>
         )}
 
         {!loading && !error && sessions.length === 0 && (
-          <div className="tf-sessions-muted">No sessions found yet.</div>
+          <div className={mutedTextClassName}>No sessions found yet.</div>
         )}
 
         {!loading && !error && (
-          <div className="tf-sessions-list">
-            <div className="tf-kanban">
-              <div className="tf-kanban-column">
-                <div className="tf-kanban-column-header">
-                  <span className="tf-kanban-column-title">Active</span>
-                  <span className="tf-kanban-column-count">
+          <div className="flex flex-col gap-2.5">
+            <div className="grid items-stretch gap-3 md:grid-cols-2">
+              <div className="flex flex-col gap-2 rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-slate-900">Active</span>
+                  <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
                     {activeSessions.length}
                   </span>
                 </div>
-                <div className="tf-kanban-column-body">
+                <div className="flex flex-col gap-2">
                   {activeSessions.length === 0 && (
-                    <div className="tf-sessions-muted tf-kanban-empty">
+                    <div className="rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-500">
                       No active sessions.
                     </div>
                   )}
@@ -172,37 +183,37 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                       <button
                         key={session.id}
                         type="button"
-                        className="tf-session-row"
+                        className={sessionRowClassName}
                         onClick={() => navigate(`/sessions/${session.id}`)}
                       >
-                        <div className="tf-session-row-main">
-                          <div className="tf-session-title">
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <div className="text-sm font-semibold text-slate-900">
                             {session.title || session.id.slice(0, 8)}
                           </div>
-                          <div className="tf-session-meta">
-                            <span className="tf-session-status">
+                          <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
                               {statusLabel}
                             </span>
-                            <span className="tf-session-id">{session.id}</span>
+                            <span className="font-mono">{session.id}</span>
                           </div>
                         </div>
-                        <div className="tf-session-chevron">›</div>
+                        <div className="shrink-0 text-lg text-slate-400">›</div>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="tf-kanban-column">
-                <div className="tf-kanban-column-header">
-                  <span className="tf-kanban-column-title">Ready</span>
-                  <span className="tf-kanban-column-count">
+              <div className="flex flex-col gap-2 rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-slate-900">Ready</span>
+                  <span className="min-w-7 rounded-full border border-slate-200 bg-white px-[9px] py-[3px] text-center text-xs text-slate-500">
                     {readySessions.length}
                   </span>
                 </div>
-                <div className="tf-kanban-column-body">
+                <div className="flex flex-col gap-2">
                   {readySessions.length === 0 && (
-                    <div className="tf-sessions-muted tf-kanban-empty">
+                    <div className="rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-500">
                       No ready sessions.
                     </div>
                   )}
@@ -216,21 +227,21 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                       <button
                         key={session.id}
                         type="button"
-                        className="tf-session-row"
+                        className={sessionRowClassName}
                         onClick={() => navigate(`/sessions/${session.id}`)}
                       >
-                        <div className="tf-session-row-main">
-                          <div className="tf-session-title">
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <div className="text-sm font-semibold text-slate-900">
                             {session.title || session.id.slice(0, 8)}
                           </div>
-                          <div className="tf-session-meta">
-                            <span className="tf-session-status">
+                          <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
                               {statusLabel}
                             </span>
-                            <span className="tf-session-id">{session.id}</span>
+                            <span className="font-mono">{session.id}</span>
                           </div>
                         </div>
-                        <div className="tf-session-chevron">›</div>
+                        <div className="shrink-0 text-lg text-slate-400">›</div>
                       </button>
                     );
                   })}

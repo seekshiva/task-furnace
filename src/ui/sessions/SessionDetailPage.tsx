@@ -1,5 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Session, SessionMessage } from "./types";
+
+const shellBodyClassName =
+  "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-[18px] text-[13px] leading-[1.55] shadow-[0_16px_40px_rgba(15,23,42,0.08)] max-md:px-[14px] max-md:py-[14px]";
+
+const mutedTextClassName = "text-[13px] text-slate-500";
+
+const errorClassName =
+  "flex flex-col gap-1 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-[14px] text-rose-700";
+
+const detailPanelClassName =
+  "flex flex-col gap-2.5 rounded-[18px] border border-slate-200 bg-slate-50 p-[14px]";
+
+const baseButtonClassName =
+  "rounded-full border px-[14px] py-2 text-xs font-semibold transition disabled:cursor-default disabled:opacity-55 disabled:shadow-none";
 
 export const SessionDetailPage: React.FC<{
   sessionId: string;
@@ -15,6 +29,7 @@ export const SessionDetailPage: React.FC<{
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [sseSupported, setSseSupported] = useState<boolean | null>(null);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +66,7 @@ export const SessionDetailPage: React.FC<{
   }, [sessionId]);
 
   async function reloadMessages(currentSessionId: string, opts?: { background?: boolean }) {
-    const listEl = document.querySelector<HTMLDivElement>(".tf-session-messages-list");
+    const listEl = messageListRef.current;
     const prevScrollTop = listEl?.scrollTop ?? 0;
     const prevScrollHeight = listEl?.scrollHeight ?? 0;
 
@@ -198,101 +213,114 @@ export const SessionDetailPage: React.FC<{
   };
 
   return (
-    <section className="tf-shell-window">
-      <div className="tf-shell-body tf-sessions-body">
-        <div className="tf-page-toolbar">
+    <section className="flex min-h-0 w-full flex-1 flex-col">
+      <div className={shellBodyClassName}>
+        <div className="mb-0.5 flex items-center justify-between gap-3 max-md:flex-col max-md:items-start">
           <button
             type="button"
-            className="tf-back-link"
+            className="border-0 bg-transparent p-0 text-[13px] font-semibold text-slate-500 transition hover:text-slate-900"
             onClick={() => navigate("/sessions")}
             aria-label="Back to all sessions"
           >
             ← Back to sessions
           </button>
-          <div className="tf-page-title">Session details</div>
+          <div className="text-sm font-semibold text-slate-900">Session details</div>
         </div>
-        {loading && <div className="tf-sessions-muted">Loading session {sessionId}…</div>}
+        {loading && <div className={mutedTextClassName}>Loading session {sessionId}…</div>}
         {error && !loading && (
-          <div className="tf-sessions-error">
+          <div className={errorClassName}>
             <div>Couldn&apos;t load this session.</div>
-            <div className="tf-sessions-error-hint">
+            <div className="text-amber-700">
               Make sure <code>opencode web</code> is running, then try again.
             </div>
-            <div className="tf-sessions-error-raw">{error}</div>
+            <div className="text-xs text-amber-700">{error}</div>
           </div>
         )}
 
         {!loading && !error && session && (
           <>
-            <div className="tf-session-detail">
-              <div className="tf-session-detail-row">
-                <span className="label">Title</span>
-                <span className="value">{session.title || "Untitled session"}</span>
+            <div className={`${detailPanelClassName} mt-1`}>
+              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Title</span>
+                <span className="min-w-0 flex-1 break-words">
+                  {session.title || "Untitled session"}
+                </span>
               </div>
-              <div className="tf-session-detail-row">
-                <span className="label">ID</span>
-                <span className="value">{session.id}</span>
+              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">ID</span>
+                <span className="min-w-0 flex-1 break-all font-mono">{session.id}</span>
               </div>
               {session.status && (
-                <div className="tf-session-detail-row">
-                  <span className="label">Status</span>
-                  <span className="value">{session.status}</span>
+                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Status</span>
+                  <span className="min-w-0 flex-1 break-words">{session.status}</span>
                 </div>
               )}
               {session.directory && (
-                <div className="tf-session-detail-row">
-                  <span className="label">Directory</span>
-                  <span className="value">{session.directory}</span>
+                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                    Directory
+                  </span>
+                  <span className="min-w-0 flex-1 break-all font-mono">{session.directory}</span>
                 </div>
               )}
               {session.projectId && (
-                <div className="tf-session-detail-row">
-                  <span className="label">Project</span>
-                  <span className="value">{session.projectId}</span>
+                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Project</span>
+                  <span className="min-w-0 flex-1 break-all font-mono">
+                    {session.projectId}
+                  </span>
                 </div>
               )}
               {session.rootId && session.rootId !== session.id && (
-                <div className="tf-session-detail-row">
-                  <span className="label">Root session</span>
-                  <span className="value">{session.rootId}</span>
+                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                    Root session
+                  </span>
+                  <span className="min-w-0 flex-1 break-all font-mono">{session.rootId}</span>
                 </div>
               )}
               {session.createdAt && (
-                <div className="tf-session-detail-row">
-                  <span className="label">Created</span>
-                  <span className="value">
+                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Created</span>
+                  <span className="min-w-0 flex-1 break-words">
                     {new Date(session.createdAt).toLocaleString()}
                   </span>
                 </div>
               )}
               {session.updatedAt && (
-                <div className="tf-session-detail-row">
-                  <span className="label">Last updated</span>
-                  <span className="value">
+                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                    Last updated
+                  </span>
+                  <span className="min-w-0 flex-1 break-words">
                     {new Date(session.updatedAt).toLocaleString()}
                   </span>
                 </div>
               )}
             </div>
 
-            <div className="tf-session-messages">
+            <div className="flex min-h-0 flex-1 flex-col gap-2.5">
               {loadingMessages && (
-                <div className="tf-sessions-muted">Loading messages…</div>
+                <div className={mutedTextClassName}>Loading messages…</div>
               )}
 
               {messagesError && !loadingMessages && (
-                <div className="tf-sessions-error">
+                <div className={errorClassName}>
                   <div>Couldn&apos;t load messages.</div>
-                  <div className="tf-sessions-error-raw">{messagesError}</div>
+                  <div className="text-xs text-amber-700">{messagesError}</div>
                 </div>
               )}
 
               {!loadingMessages && !messagesError && messages.length === 0 && (
-                <div className="tf-sessions-muted">No messages in this session yet.</div>
+                <div className={mutedTextClassName}>No messages in this session yet.</div>
               )}
 
               {!loadingMessages && !messagesError && messages.length > 0 && (
-                <div className="tf-session-messages-list">
+                <div
+                  ref={messageListRef}
+                  className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-[18px] border border-slate-200 bg-slate-100 p-1"
+                >
                   {messages.map((msg) => {
                     const created = msg.info.createdAt
                       ? new Date(msg.info.createdAt).toLocaleTimeString()
@@ -302,21 +330,33 @@ export const SessionDetailPage: React.FC<{
                     ) as { type: "text"; text: string } | undefined;
 
                     return (
-                      <div key={msg.info.id} className={`tf-message tf-message-${msg.info.role}`}>
-                        <div className="tf-message-header">
-                          <span className="tf-message-role">{msg.info.role}</span>
-                          {created && <span className="tf-message-time">{created}</span>}
+                      <div
+                        key={msg.info.id}
+                        className={[
+                          "rounded-[14px] border px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+                          msg.info.role === "user"
+                            ? "border-blue-200 bg-blue-50"
+                            : "border-emerald-200 bg-emerald-50",
+                        ].join(" ")}
+                      >
+                        <div className="mb-1.5 flex items-center gap-2 text-[11px]">
+                          <span className="font-bold uppercase tracking-[0.06em] text-slate-500">
+                            {msg.info.role}
+                          </span>
+                          {created && <span className="ml-auto text-slate-400">{created}</span>}
                           {msg.info.status && (
-                            <span className="tf-message-status">{msg.info.status}</span>
+                            <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-slate-700">
+                              {msg.info.status}
+                            </span>
                           )}
                         </div>
                         {textPart && (
-                          <div className="tf-message-body">
+                          <div className="whitespace-pre-wrap text-[13px] leading-[1.55]">
                             {textPart.text}
                           </div>
                         )}
                         {!textPart && msg.parts.length > 0 && (
-                          <div className="tf-message-body tf-message-body-meta">
+                          <div className="flex flex-wrap gap-1.5 text-[13px] leading-[1.55]">
                             {msg.parts.map((part, index) => {
                               const baseType = (part as { type?: string }).type ?? "meta";
 
@@ -326,7 +366,10 @@ export const SessionDetailPage: React.FC<{
                                   (part as any).state?.title ??
                                   (part as any).state?.input?.filePath;
                                 return (
-                                  <span key={index} className="tf-meta-chip">
+                                  <span
+                                    key={index}
+                                    className="inline-flex max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-slate-200 bg-white px-2 py-[3px] text-[10px] font-bold tracking-[0.04em] text-slate-500"
+                                  >
                                     {tool}
                                     {title ? ` · ${title}` : ""}
                                   </span>
@@ -340,7 +383,10 @@ export const SessionDetailPage: React.FC<{
                                     ? `${fullText.slice(0, 80)}…`
                                     : fullText;
                                 return (
-                                  <span key={index} className="tf-meta-chip">
+                                  <span
+                                    key={index}
+                                    className="inline-flex max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-slate-200 bg-white px-2 py-[3px] text-[10px] font-bold tracking-[0.04em] text-slate-500"
+                                  >
                                     reasoning
                                     {snippet ? ` · ${snippet}` : ""}
                                   </span>
@@ -353,7 +399,10 @@ export const SessionDetailPage: React.FC<{
                                   (part as any).state?.status ??
                                   undefined;
                                 return (
-                                  <span key={index} className="tf-meta-chip">
+                                  <span
+                                    key={index}
+                                    className="inline-flex max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-slate-200 bg-white px-2 py-[3px] text-[10px] font-bold tracking-[0.04em] text-slate-500"
+                                  >
                                     {baseType}
                                     {subtype ? ` · ${subtype}` : ""}
                                   </span>
@@ -361,7 +410,10 @@ export const SessionDetailPage: React.FC<{
                               }
 
                               return (
-                                <span key={index} className="tf-meta-chip">
+                                <span
+                                  key={index}
+                                  className="inline-flex max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-slate-200 bg-white px-2 py-[3px] text-[10px] font-bold tracking-[0.04em] text-slate-500"
+                                >
                                   {baseType}
                                 </span>
                               );
@@ -374,9 +426,9 @@ export const SessionDetailPage: React.FC<{
                 </div>
               )}
 
-              <div className="tf-session-input">
+              <div className={detailPanelClassName}>
                 <textarea
-                  className="tf-session-input-textarea"
+                  className="min-h-[88px] w-full max-h-[180px] resize-y rounded-[14px] border border-slate-300 bg-white px-[13px] py-3 text-slate-900 placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-200/60"
                   placeholder="Add a comment or ask the session to continue…"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -384,15 +436,15 @@ export const SessionDetailPage: React.FC<{
                   disabled={submitting}
                 />
                 {submitError && (
-                  <div className="tf-sessions-error tf-session-input-error">
+                  <div className={errorClassName}>
                     <div>Couldn&apos;t send message.</div>
-                    <div className="tf-sessions-error-raw">{submitError}</div>
+                    <div className="text-xs text-amber-700">{submitError}</div>
                   </div>
                 )}
-                <div className="tf-session-input-actions">
+                <div className="flex flex-wrap justify-end gap-2">
                   <button
                     type="button"
-                    className="tf-button tf-button-secondary"
+                    className={`${baseButtonClassName} border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900`}
                     disabled={submitting || !input.trim()}
                     onClick={() => handleSubmit(true)}
                   >
@@ -400,7 +452,7 @@ export const SessionDetailPage: React.FC<{
                   </button>
                   <button
                     type="button"
-                    className="tf-button tf-button-primary"
+                    className={`${baseButtonClassName} border-transparent bg-blue-600 text-white shadow-[0_10px_20px_rgba(37,99,235,0.18)] hover:bg-blue-700`}
                     disabled={submitting || !input.trim()}
                     onClick={() => handleSubmit(false)}
                   >

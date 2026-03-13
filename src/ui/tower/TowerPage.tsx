@@ -14,6 +14,31 @@ type TowerCommitFile = {
   deletions: number;
 };
 
+const shellBodyClassName =
+  "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-[18px] text-[13px] leading-[1.55] shadow-[0_16px_40px_rgba(15,23,42,0.08)] max-md:px-[14px] max-md:py-[14px]";
+
+const mutedTextClassName = "text-[13px] text-slate-500";
+
+const errorClassName =
+  "flex flex-col gap-1 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-[14px] text-rose-700";
+
+const towerRowClassName =
+  "w-full cursor-pointer rounded-[14px] border border-slate-200 bg-white p-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:-translate-y-px hover:border-blue-200 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)]";
+
+function getFileStatusBadgeClassName(statusCode: string) {
+  switch (statusCode) {
+    case "A":
+      return "bg-emerald-100 text-emerald-800";
+    case "D":
+      return "bg-rose-100 text-rose-700";
+    case "R":
+    case "C":
+      return "bg-amber-100 text-amber-700";
+    default:
+      return "bg-blue-100 text-blue-700";
+  }
+}
+
 export const TowerPage: React.FC = () => {
   const [commits, setCommits] = useState<TowerCommit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,19 +164,19 @@ export const TowerPage: React.FC = () => {
   };
 
   return (
-    <section className="tf-shell-window">
-      <div className="tf-shell-body tf-sessions-body">
-        <div className="tf-page-title">Tower</div>
-        {loading && <div className="tf-sessions-muted">Loading recent commits…</div>}
+    <section className="flex min-h-0 w-full flex-1 flex-col">
+      <div className={shellBodyClassName}>
+        <div className="text-sm font-semibold text-slate-900">Tower</div>
+        {loading && <div className={mutedTextClassName}>Loading recent commits…</div>}
         {error && !loading && (
-          <div className="tf-sessions-error">
+          <div className={errorClassName}>
             <div>Couldn&apos;t load commits.</div>
-            <div className="tf-sessions-error-raw">{error}</div>
+            <div className="text-xs text-amber-700">{error}</div>
           </div>
         )}
 
         {!loading && !error && aheadCount !== null && (
-          <div className="tf-sessions-muted">
+          <div className={mutedTextClassName}>
             {aheadCount === 0
               ? "No commits ahead of main. Current branch is up to date with main."
               : `${aheadCount} commit${aheadCount === 1 ? "" : "s"} ahead of main.`}
@@ -159,37 +184,42 @@ export const TowerPage: React.FC = () => {
         )}
 
         {!loading && !error && commits.length === 0 && aheadCount === null && (
-          <div className="tf-sessions-muted">No commits found (or repository is empty).</div>
+          <div className={mutedTextClassName}>No commits found (or repository is empty).</div>
         )}
 
         {!loading && !error && commits.length > 0 && (
-          <div className="tf-tower-layout">
-            <div className="tf-tower-left">
-              <div className="tf-sessions-list-inner tf-tower-list">
+          <div className="flex min-h-0 flex-1 gap-3 max-[900px]:flex-col">
+            <div className="flex min-w-0 max-w-[50%] basis-[40%] flex-col gap-2 overflow-y-auto max-[900px]:max-w-none max-[900px]:basis-auto">
+              <div className="mt-0.5 flex flex-col gap-2">
                 {commits.map((commit) => {
                   const isSelected = selectedCommit && selectedCommit.hash === commit.hash;
                   return (
                     <button
                       key={commit.hash}
                       type="button"
-                      className={`tf-tower-row ${isSelected ? "tf-tower-row-selected" : ""}`}
+                      className={[
+                        towerRowClassName,
+                        isSelected
+                          ? "border-blue-300 bg-sky-50 shadow-[0_0_0_3px_rgba(147,197,253,0.22)]"
+                          : "",
+                      ].join(" ")}
                       onClick={() => handleSelectCommit(commit)}
                     >
-                      <div className="tf-tower-row-main">
-                        <div className="tf-tower-message">{commit.message}</div>
-                        <div className="tf-tower-meta">
-                          <span className="tf-tower-author">{commit.author}</span>
-                          <span className="tf-tower-date">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <div className="text-sm font-semibold text-slate-900">{commit.message}</div>
+                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                          <span>{commit.author}</span>
+                          <span>
                             {new Date(commit.date).toLocaleString()}
                           </span>
-                          <span className="tf-tower-hash">{commit.hash.slice(0, 10)}</span>
+                          <span className="font-mono">{commit.hash.slice(0, 10)}</span>
                         </div>
                       </div>
                     </button>
                   );
                 })}
                 {aheadCount !== null && (
-                  <div className="tf-sessions-muted tf-tower-ahead-indicator">
+                  <div className={mutedTextClassName}>
                     Showing {commits.length} commit
                     {commits.length === 1 ? "" : "s"} ahead of main (total {aheadCount}).
                   </div>
@@ -197,41 +227,43 @@ export const TowerPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="tf-tower-right">
+            <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
               {!selectedCommit && (
-                <div className="tf-sessions-muted">Select a commit to see details.</div>
+                <div className={mutedTextClassName}>Select a commit to see details.</div>
               )}
 
               {selectedCommit && (
-                <div className="tf-tower-detail">
-                  <div className="tf-tower-detail-header">
-                    <div className="tf-tower-detail-title">{selectedCommit.message}</div>
-                    <div className="tf-tower-detail-meta">
+                <div className="flex min-h-0 flex-1 flex-col gap-2.5 rounded-[18px] border border-slate-200 bg-slate-50 p-[14px]">
+                  <div className="flex min-h-0 flex-col gap-2">
+                    <div className="text-sm font-semibold text-slate-900">
+                      {selectedCommit.message}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-slate-500">
                       <span>{selectedCommit.author}</span>
                       <span>{new Date(selectedCommit.date).toLocaleString()}</span>
-                      <span className="tf-tower-hash">{selectedCommit.hash.slice(0, 10)}</span>
+                      <span className="font-mono">{selectedCommit.hash.slice(0, 10)}</span>
                     </div>
                   </div>
 
-                  <div className="tf-tower-detail-body">
+                  <div className="flex min-h-0 flex-col gap-2">
                     {filesLoading && (
-                      <div className="tf-sessions-muted">Loading changed files…</div>
+                      <div className={mutedTextClassName}>Loading changed files…</div>
                     )}
                     {filesError && !filesLoading && (
-                      <div className="tf-sessions-error">
+                      <div className={errorClassName}>
                         <div>Couldn&apos;t load changed files.</div>
-                        <div className="tf-sessions-error-raw">{filesError}</div>
+                        <div className="text-xs text-amber-700">{filesError}</div>
                       </div>
                     )}
 
                     {!filesLoading && !filesError && files.length === 0 && (
-                      <div className="tf-sessions-muted">
+                      <div className={mutedTextClassName}>
                         No file changes found for this commit.
                       </div>
                     )}
 
                     {!filesLoading && !filesError && files.length > 0 && (
-                      <div className="tf-tower-files-list">
+                      <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
                         {files.map((file) => {
                           const statusCode = file.status;
                           const statusLabel =
@@ -246,17 +278,20 @@ export const TowerPage: React.FC = () => {
                                     : "Modified";
 
                           return (
-                            <div key={file.path} className="tf-tower-file-row">
-                              <div className="tf-tower-file-main">
-                                <span className="tf-tower-file-path">{file.path}</span>
+                            <div
+                              key={file.path}
+                              className="rounded-[14px] border border-slate-200 bg-white px-[11px] py-[9px] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                            >
+                              <div className="flex items-center justify-between gap-2.5 max-md:flex-col max-md:items-start">
+                                <span className="break-all text-xs">{file.path}</span>
                                 <span
-                                  className={`tf-tower-file-status tf-tower-file-status-${statusCode.toLowerCase()}`}
+                                  className={`inline-flex items-center rounded-full px-2 py-[3px] text-[10px] font-bold uppercase tracking-[0.04em] ${getFileStatusBadgeClassName(statusCode)}`}
                                 >
                                   {statusLabel}
                                 </span>
                               </div>
-                              <div className="tf-tower-file-meta">
-                                <span className="tf-tower-file-lines">
+                              <div className="mt-1 text-[11px] text-slate-500">
+                                <span className="font-mono">
                                   +{file.additions} / -{file.deletions}
                                 </span>
                               </div>
