@@ -2,8 +2,10 @@ export type Session = {
   id: string;
   title?: string | null;
   status?: string | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
+  time?: {
+    created?: string | null;
+    updated?: string | null;
+  } | null;
   directory?: string | null;
   projectId?: string | null;
   rootId?: string | null;
@@ -93,5 +95,13 @@ export function normalizeSessionStatus(
 
 export function isActiveSessionStatus(status: NormalizedSessionStatus): boolean {
   return status.type === "busy" || status.type === "retry";
+}
+
+export function getSessionCreatedAt(session: Session): string | null {
+  return session.time?.created ?? null;
+}
+
+export function getSessionUpdatedAt(session: Session): string | null {
+  return session.time?.updated ?? null;
 }
 

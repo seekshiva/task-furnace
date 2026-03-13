@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { getSessionCreatedAt, getSessionUpdatedAt } from "./types";
 import type { Session, SessionMessage } from "./types";
 
 const shellBodyClassName =
@@ -212,6 +213,9 @@ export const SessionDetailPage: React.FC<{
     }
   };
 
+  const createdAt = session ? getSessionCreatedAt(session) : null;
+  const updatedAt = session ? getSessionUpdatedAt(session) : null;
+
   return (
     <section className="flex min-h-0 w-full flex-1 flex-col">
       <div className={shellBodyClassName}>
@@ -276,21 +280,21 @@ export const SessionDetailPage: React.FC<{
                   <span className="min-w-0 flex-1 break-all font-mono">{session.rootId}</span>
                 </div>
               )}
-              {session.createdAt && (
+              {createdAt && (
                 <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
                   <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Created</span>
                   <span className="min-w-0 flex-1 break-words">
-                    {new Date(session.createdAt).toLocaleString()}
+                    {new Date(createdAt).toLocaleString()}
                   </span>
                 </div>
               )}
-              {session.updatedAt && (
+              {updatedAt && (
                 <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
                   <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
                     Last updated
                   </span>
                   <span className="min-w-0 flex-1 break-words">
-                    {new Date(session.updatedAt).toLocaleString()}
+                    {new Date(updatedAt).toLocaleString()}
                   </span>
                 </div>
               )}
