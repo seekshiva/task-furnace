@@ -5,6 +5,11 @@ import {
   getSessionUpdatedAt,
   normalizeSessionStatus,
   isActiveSessionStatus,
+  isReasoningPart,
+  isStepFinishPart,
+  isStepStartPart,
+  isTextPart,
+  isToolPart,
 } from "./types";
 import { formatDisplayDate, formatDisplayTimestamp } from "../date";
 import type {
@@ -12,6 +17,8 @@ import type {
   SessionMessage,
   SessionStatusMap,
   SessionActivityMap,
+  SessionMessagePart,
+  SessionToolState,
 } from "./types";
 
 const shellBodyClassName =
@@ -27,6 +34,142 @@ const detailPanelClassName =
 
 const baseButtonClassName =
   "rounded-full border px-[14px] py-2 text-xs font-semibold transition disabled:cursor-default disabled:opacity-55 disabled:shadow-none";
+
+function safeStringify(value: unknown, maxLen = 1200): string {
+  try {
+    const text = JSON.stringify(value, null, 2);
+    if (typeof text !== "string") return String(value);
+    return text.length > maxLen ? `${text.slice(0, maxLen)}\n…` : text;
+  } catch {
+    const text = String(value);
+    return text.length > maxLen ? `${text.slice(0, maxLen)}…` : text;
+  }
+}
+
+function getToolInput(state: SessionToolState | undefined): Record<string, unknown> {
+  const input = (state as any)?.input;
+  return input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+}
+
+function getBashCommand(input: Record<string, unknown>): string | null {
+  const candidates = [
+    input.command,
+    (input as any).cmd,
+    (input as any).script,
+    (input as any).arguments,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c;
+  }
+  return null;
+}
+
+function ToolStatusBadge({ status }: { status: string }) {
+  const tone =
+    status === "completed"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : status === "running"
+        ? "border-blue-200 bg-blue-50 text-blue-800"
+        : status === "error"
+          ? "border-rose-200 bg-rose-50 text-rose-800"
+          : "border-slate-200 bg-slate-50 text-slate-700";
+
+  return (
+    <span
+      className={[
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-[0.04em]",
+        tone,
+      ].join(" ")}
+    >
+      {status}
+    </span>
+  );
+}
+
+function ToolPartCard({ part }: { part: Extract<SessionMessagePart, { type: "tool" }> }) {
+  const toolName = typeof part.tool === "string" && part.tool.trim() ? part.tool : "tool";
+  const state = part.state as SessionToolState | undefined;
+  const status = (state as any)?.status ?? "pending";
+  const input = getToolInput(state);
+  const title =
+    (state as any)?.title ??
+    (input.filePath as string | undefined) ??
+    (input.path as string | undefined) ??
+    (toolName === "bash" ? getBashCommand(input) : undefined) ??
+    null;
+
+  const isBash = toolName === "bash" || toolName === "shell";
+  const bashCommand = isBash ? getBashCommand(input) : null;
+  const output =
+    status === "completed" && typeof (state as any)?.output === "string" ? ((state as any).output as string) : null;
+  const error =
+    status === "error" && typeof (state as any)?.error === "string" ? ((state as any).error as string) : null;
+
+  return (
+    <div className="rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold tracking-[0.04em] text-slate-600">
+              {isBash ? "Shell" : toolName}
+              {isBash && title ? `: ${String(title)}` : ""}
+            </span>
+            <ToolStatusBadge status={String(status)} />
+          </div>
+          {!isBash && title && (
+            <div className="mt-1 min-w-0 break-words text-[12px] text-slate-500">
+              {String(title)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isBash && bashCommand && (
+        <div className="mt-2 overflow-hidden rounded-[12px] border border-slate-200 bg-slate-950 text-slate-100">
+          <pre className="overflow-x-auto px-3 py-2 text-[12px] leading-[1.55]">
+            <code className="before:select-none before:text-emerald-400 before:content-['$_']">
+              {bashCommand}
+            </code>
+          </pre>
+        </div>
+      )}
+
+      {!isBash && Object.keys(input).length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500">
+            input
+          </summary>
+          <pre className="mt-2 max-h-[220px] overflow-auto rounded-[12px] border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] leading-[1.55] text-slate-800">
+            <code>{safeStringify(input)}</code>
+          </pre>
+        </details>
+      )}
+
+      {(output || error) && (
+        <details className="mt-2" open={Boolean(error)}>
+          <summary
+            className={[
+              "cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em]",
+              error ? "text-rose-700" : "text-slate-500",
+            ].join(" ")}
+          >
+            {error ? "error" : "output"}
+          </summary>
+          <pre
+            className={[
+              "mt-2 max-h-[280px] overflow-auto rounded-[12px] border px-3 py-2 text-[12px] leading-[1.55]",
+              error
+                ? "border-rose-200 bg-rose-50 text-rose-900"
+                : "border-slate-200 bg-slate-50 text-slate-800",
+            ].join(" ")}
+          >
+            <code>{error ?? output}</code>
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+}
 
 type ChildColumnKey = "active" | "ready" | "done";
 
@@ -458,7 +601,7 @@ export const SessionDetailPage: React.FC<{
           </div>
 
           {hasSubtasks && (
-            <div className="flex flex-col items-end gap-1 md:hidden">
+            <div className="flex flex-col items-end gap-1 lg:hidden">
               <div className="flex gap-1">
                 <button
                   type="button"
@@ -569,11 +712,11 @@ export const SessionDetailPage: React.FC<{
 
         {!loading && !error && session && (
           <>
-            <div className="mt-2 flex min-h-0 flex-1 flex-col gap-3 md:flex-row">
+            <div className="mt-2 flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:overflow-x-auto">
               <div
                 className={[
-                  "flex min-h-0 flex-1 flex-col gap-2 max-md:gap-1.5",
-                  hasSubtasks && mobilePane === "subtasks" ? "hidden md:flex" : "",
+                  "flex min-h-0 flex-1 shrink-0 flex-col gap-2 max-md:gap-1.5 lg:min-w-[560px]",
+                  hasSubtasks && mobilePane === "subtasks" ? "hidden lg:flex" : "",
                 ].join(" ")}
               >
                 {/* Desktop metadata panel now behind info toggle */}
@@ -670,103 +813,107 @@ export const SessionDetailPage: React.FC<{
               {!loadingMessages && !messagesError && messages.length > 0 && (
                 <div
                   ref={messageListRef}
-                  className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-[18px] border border-slate-200 bg-slate-100 p-1"
+                  className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded-[18px] border border-slate-200 bg-slate-100 p-3"
                 >
                   {messages.map((msg) => {
                     const created = formatDisplayDate(msg.info.createdAt);
-                    const textPart = msg.parts.find(
-                      (p) => p.type === "text",
-                    ) as { type: "text"; text: string } | undefined;
+                    const role = msg.info.role;
+                    const isUser = role === "user";
+                    const parts = msg.parts as SessionMessagePart[];
+                    const textParts = parts.filter(isTextPart);
+                    const otherParts = parts.filter((p) => !isTextPart(p));
 
                     return (
-                      <div
-                        key={msg.info.id}
-                        className={[
-                          "rounded-[14px] border px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
-                          msg.info.role === "user"
-                            ? "border-blue-200 bg-blue-50"
-                            : "border-emerald-200 bg-emerald-50",
-                        ].join(" ")}
-                      >
-                        <div className="mb-1.5 flex items-center gap-2 text-[11px]">
-                          <span className="font-bold uppercase tracking-[0.06em] text-slate-500">
-                            {msg.info.role}
-                          </span>
-                          {created && <span className="ml-auto text-slate-400">{created}</span>}
-                          {msg.info.status && (
-                            <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-slate-700">
-                              {msg.info.status}
-                            </span>
-                          )}
-                        </div>
-                        {textPart && (
-                          <div className="whitespace-pre-wrap text-[13px] leading-[1.55]">
-                            {textPart.text}
-                          </div>
-                        )}
-                        {!textPart && msg.parts.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 text-[13px] leading-[1.55]">
-                            {msg.parts.map((part, index) => {
-                              const baseType = (part as { type?: string }).type ?? "meta";
-
-                              if (baseType === "tool") {
-                                const tool = (part as any).tool ?? "tool";
-                                const title =
-                                  (part as any).state?.title ??
-                                  (part as any).state?.input?.filePath;
-                                return (
-                                  <span
-                                    key={index}
-                                    className="inline-flex max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-slate-200 bg-white px-2 py-[3px] text-[10px] font-bold tracking-[0.04em] text-slate-500"
-                                  >
-                                    {tool}
-                                    {title ? ` · ${title}` : ""}
-                                  </span>
-                                );
-                              }
-
-                              if (baseType === "reasoning") {
-                                const fullText = (part as any).text as string | undefined;
-                                const snippet =
-                                  fullText && fullText.length > 80
-                                    ? `${fullText.slice(0, 80)}…`
-                                    : fullText;
-                                return (
-                                  <span
-                                    key={index}
-                                    className="inline-flex max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-slate-200 bg-white px-2 py-[3px] text-[10px] font-bold tracking-[0.04em] text-slate-500"
-                                  >
-                                    reasoning
-                                    {snippet ? ` · ${snippet}` : ""}
-                                  </span>
-                                );
-                              }
-
-                              if (baseType === "step-start" || baseType === "step-finish") {
-                                const subtype =
-                                  (part as any).reason ??
-                                  (part as any).state?.status ??
-                                  undefined;
-                                return (
-                                  <span
-                                    key={index}
-                                    className="inline-flex max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-slate-200 bg-white px-2 py-[3px] text-[10px] font-bold tracking-[0.04em] text-slate-500"
-                                  >
-                                    {baseType}
-                                    {subtype ? ` · ${subtype}` : ""}
-                                  </span>
-                                );
-                              }
-
-                              return (
-                                <span
-                                  key={index}
-                                  className="inline-flex max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-slate-200 bg-white px-2 py-[3px] text-[10px] font-bold tracking-[0.04em] text-slate-500"
-                                >
-                                  {baseType}
+                      <div key={msg.info.id} className="flex flex-col gap-2">
+                        {isUser ? (
+                          <div className="ml-auto inline-block w-fit max-w-[70%] rounded-[16px] border border-blue-200 bg-blue-50 px-[14px] py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] max-md:max-w-[92%]">
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                              {created && <span className="ml-auto text-slate-400">{created}</span>}
+                              {msg.info.status && (
+                                <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-slate-700">
+                                  {msg.info.status}
                                 </span>
-                              );
-                            })}
+                              )}
+                            </div>
+                            <div className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-[1.55] text-slate-900">
+                              {textParts.map((p, idx) => (
+                                <React.Fragment key={idx}>
+                                  {idx > 0 ? "\n" : ""}
+                                  {p.text}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full max-w-[860px]">
+                            {created && (
+                              <div className="mb-1 text-[11px] text-slate-400">{created}</div>
+                            )}
+                            {msg.info.status && (
+                              <div className="mb-2">
+                                <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-slate-700">
+                                  {msg.info.status}
+                                </span>
+                              </div>
+                            )}
+
+                            {textParts.length > 0 && (
+                              <div className="whitespace-pre-wrap text-[13px] leading-[1.6] text-slate-900">
+                                {textParts.map((p, idx) => (
+                                  <React.Fragment key={idx}>
+                                    {idx > 0 ? "\n" : ""}
+                                    {p.text}
+                                  </React.Fragment>
+                                ))}
+                              </div>
+                            )}
+
+                            {otherParts.length > 0 && (
+                              <div className="mt-2 flex flex-col gap-2">
+                                {otherParts.map((part, index) => {
+                                  if (isToolPart(part)) {
+                                    return <ToolPartCard key={index} part={part} />;
+                                  }
+
+                                  if (isReasoningPart(part)) {
+                                    const snippet =
+                                      part.text.length > 120 ? `${part.text.slice(0, 120)}…` : part.text;
+                                    return (
+                                      <details
+                                        key={index}
+                                        className="rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-[12px] text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                                      >
+                                        <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500">
+                                          reasoning <span className="font-normal">· {snippet}</span>
+                                        </summary>
+                                        <div className="mt-2 whitespace-pre-wrap leading-[1.55] text-slate-800">
+                                          {part.text}
+                                        </div>
+                                      </details>
+                                    );
+                                  }
+
+                                  if (isStepStartPart(part)) {
+                                    return null;
+                                  }
+
+                                  if (isStepFinishPart(part)) {
+                                    return null;
+                                  }
+
+                                  const baseType =
+                                    typeof (part as any)?.type === "string" ? ((part as any).type as string) : "meta";
+                                  return (
+                                    <div
+                                      key={index}
+                                      className="text-[11px] font-semibold tracking-[0.04em] text-slate-500"
+                                    >
+                                      {baseType}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -806,9 +953,9 @@ export const SessionDetailPage: React.FC<{
 
               <div
                 className={[
-                  "flex min-h-0 flex-1 flex-col",
-                  hasSubtasks && mobilePane === "thread" ? "hidden md:flex" : "",
-                  !hasSubtasks ? "hidden md:flex" : "",
+                  "flex min-h-0 flex-1 shrink-0 flex-col lg:min-w-[420px]",
+                  hasSubtasks && mobilePane === "thread" ? "hidden lg:flex" : "",
+                  !hasSubtasks ? "hidden lg:flex" : "",
                 ].join(" ")}
               >
                 <div className="flex min-h-0 flex-1 flex-col rounded-[18px] border border-slate-200 bg-slate-50 p-[14px]">

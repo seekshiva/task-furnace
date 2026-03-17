@@ -32,11 +32,80 @@ export type SessionMessage = {
     createdAt?: string | null;
     status?: string | null;
   };
-  parts: Array<
-    | { type: "text"; text: string }
-    | { type: string; [key: string]: unknown }
-  >;
+  parts: SessionMessagePart[];
 };
+
+export type SessionMessageRole = "user" | "assistant" | (string & {});
+
+export type SessionMessagePart =
+  | { type: "text"; text: string; [key: string]: unknown }
+  | { type: "reasoning"; text: string; [key: string]: unknown }
+  | { type: "step-start"; [key: string]: unknown }
+  | { type: "step-finish"; reason?: string; [key: string]: unknown }
+  | {
+      type: "tool";
+      tool?: string;
+      callID?: string;
+      state?: SessionToolState;
+      [key: string]: unknown;
+    }
+  | { type: string; [key: string]: unknown };
+
+export type SessionToolState =
+  | { status: "pending"; input?: Record<string, unknown>; raw?: string; [key: string]: unknown }
+  | {
+      status: "running";
+      input?: Record<string, unknown>;
+      title?: string;
+      time?: { start?: number };
+      metadata?: Record<string, unknown>;
+      [key: string]: unknown;
+    }
+  | {
+      status: "completed";
+      input?: Record<string, unknown>;
+      output?: string;
+      title?: string;
+      time?: { start?: number; end?: number; compacted?: number };
+      metadata?: Record<string, unknown>;
+      attachments?: Array<unknown>;
+      [key: string]: unknown;
+    }
+  | {
+      status: "error";
+      input?: Record<string, unknown>;
+      error?: string;
+      time?: { start?: number; end?: number };
+      metadata?: Record<string, unknown>;
+      [key: string]: unknown;
+    }
+  | { status: string; [key: string]: unknown };
+
+export function isTextPart(part: SessionMessagePart): part is Extract<SessionMessagePart, { type: "text" }> {
+  return part?.type === "text" && typeof (part as any).text === "string";
+}
+
+export function isReasoningPart(
+  part: SessionMessagePart,
+): part is Extract<SessionMessagePart, { type: "reasoning" }> {
+  return part?.type === "reasoning" && typeof (part as any).text === "string";
+}
+
+export function isToolPart(part: SessionMessagePart): part is Extract<SessionMessagePart, { type: "tool" }> {
+  return part?.type === "tool";
+}
+
+export function isStepStartPart(
+  part: SessionMessagePart,
+): part is Extract<SessionMessagePart, { type: "step-start" }> {
+  return part?.type === "step-start";
+}
+
+export function isStepFinishPart(
+  part: SessionMessagePart,
+): part is Extract<SessionMessagePart, { type: "step-finish" }> {
+  return part?.type === "step-finish";
+}
 
 export type SessionStatusMap = Record<
   string,
