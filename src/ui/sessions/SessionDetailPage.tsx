@@ -803,9 +803,9 @@ export const SessionDetailPage: React.FC<{
 
               <div
                 className={[
-                  "min-h-0 flex-1",
-                  hasSubtasks && mobilePane === "thread" ? "hidden md:block" : "",
-                  !hasSubtasks ? "hidden md:block" : "",
+                  "flex min-h-0 flex-1 flex-col",
+                  hasSubtasks && mobilePane === "thread" ? "hidden md:flex" : "",
+                  !hasSubtasks ? "hidden md:flex" : "",
                 ].join(" ")}
               >
                 <div className="flex min-h-0 flex-1 flex-col rounded-[18px] border border-slate-200 bg-slate-50 p-[14px]">
@@ -844,7 +844,7 @@ export const SessionDetailPage: React.FC<{
                         return (
                           <div
                             key={column.key}
-                            className="flex min-h-[240px] min-w-[260px] shrink-0 flex-col rounded-[16px] border border-slate-200 bg-white p-3 md:min-w-[280px]"
+                            className="flex h-full min-h-0 min-w-[260px] shrink-0 flex-col rounded-[16px] border border-slate-200 bg-white p-3 md:min-w-[280px]"
                           >
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-bold text-slate-900">
