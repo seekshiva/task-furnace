@@ -345,7 +345,7 @@ export const SessionDetailPage: React.FC<{
     };
   }, [sessionId, sseSupported]);
 
-  const handleSubmit = async (noReply: boolean) => {
+  const handleSubmit = async () => {
     const text = input.trim();
     if (!text || submitting) return;
 
@@ -358,7 +358,7 @@ export const SessionDetailPage: React.FC<{
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text, noReply }),
+        body: JSON.stringify({ text, noReply: false }),
       });
 
       if (!res.ok) {
@@ -383,17 +383,139 @@ export const SessionDetailPage: React.FC<{
   return (
     <section className="flex min-h-0 w-full flex-1 flex-col">
       <div className={shellBodyClassName}>
-        <div className="mb-0.5 flex items-center justify-between gap-3 max-md:flex-col max-md:items-start">
+        <div className="mb-0.5 flex items-center justify-between gap-3">
           <button
             type="button"
-            className="border-0 bg-transparent p-0 text-[13px] font-semibold text-slate-500 transition hover:text-slate-900"
+            className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-2 text-[14px] font-semibold text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 hover:text-slate-900"
             onClick={() => navigate("/sessions")}
             aria-label="Back to all sessions"
           >
-            ← Back to sessions
+            ←
           </button>
-          <div className="text-sm font-semibold text-slate-900">Session details</div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="min-w-0 truncate text-[13px] font-semibold text-slate-900">
+                {titleLabel}
+              </div>
+              {!loading && !error && session && (
+                <button
+                  type="button"
+                  className="shrink-0 rounded-full bg-slate-100 p-1.5 text-slate-700 transition hover:bg-slate-200 md:hidden"
+                  onClick={() => setMobileDetailsOpen((v) => !v)}
+                  aria-label={mobileDetailsOpen ? "Hide session details" : "Show session details"}
+                  aria-expanded={mobileDetailsOpen}
+                >
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-[11px] font-bold leading-none">
+                    i
+                  </span>
+                </button>
+              )}
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+              {createdAt && <span>{formatDisplayDate(createdAt)}</span>}
+            </div>
+          </div>
+
+          {hasSubtasks && (
+            <div className="flex flex-col items-end gap-1 md:hidden">
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  className={[
+                    "rounded-full px-3 py-1 text-[12px] font-semibold transition",
+                    mobilePane === "thread"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                  ].join(" ")}
+                  onClick={() => setMobilePane("thread")}
+                >
+                  Thread
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    "rounded-full px-3 py-1 text-[12px] font-semibold transition",
+                    mobilePane === "subtasks"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                  ].join(" ")}
+                  onClick={() => setMobilePane("subtasks")}
+                >
+                  Sub-tasks ({directChildren.length})
+                </button>
+              </div>
+              {!loading && !error && session && (
+                <div className="text-[11px] text-slate-500">
+                  {activeChildCount} active · {readyChildCount} ready
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
+        {!loading && !error && session && mobileDetailsOpen && (
+          <div className={`${detailPanelClassName} mt-2 md:hidden`}>
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                className="rounded-full bg-slate-100 px-3 py-1 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200"
+                onClick={() => setMobileDetailsOpen(false)}
+                aria-label="Close session details"
+              >
+                Close
+              </button>
+            </div>
+            <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+              <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Title</span>
+              <span className="min-w-0 flex-1 break-words">
+                {session.title || "Untitled session"}
+              </span>
+            </div>
+            {session.status && (
+              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Status</span>
+                <span className="min-w-0 flex-1 break-words">{session.status}</span>
+              </div>
+            )}
+            {session.directory && (
+              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                  Directory
+                </span>
+                <span className="min-w-0 flex-1 break-all font-mono">{session.directory}</span>
+              </div>
+            )}
+            {session.projectId && (
+              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Project</span>
+                <span className="min-w-0 flex-1 break-all font-mono">{session.projectId}</span>
+              </div>
+            )}
+            {session.rootId && session.rootId !== session.id && (
+              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                  Root session
+                </span>
+                <span className="min-w-0 flex-1 break-all font-mono">{session.rootId}</span>
+              </div>
+            )}
+            {createdAt && (
+              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Created</span>
+                <span className="min-w-0 flex-1 break-words">{formatDisplayDate(createdAt)}</span>
+              </div>
+            )}
+            {updatedAt && (
+              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                  Last updated
+                </span>
+                <span className="min-w-0 flex-1 break-words">{formatDisplayDate(updatedAt)}</span>
+              </div>
+            )}
+          </div>
+        )}
         {loading && <div className={mutedTextClassName}>Loading session {sessionId}…</div>}
         {error && !loading && (
           <div className={errorClassName}>
@@ -407,38 +529,6 @@ export const SessionDetailPage: React.FC<{
 
         {!loading && !error && session && (
           <>
-            {hasSubtasks && (
-              <div className="mt-1 flex w-full items-center justify-between gap-2 rounded-[18px] border border-slate-200 bg-white px-3 py-2 md:hidden">
-                <div className="text-[12px] font-semibold text-slate-600">View</div>
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    className={[
-                      "rounded-full px-3 py-1 text-[12px] font-semibold transition",
-                      mobilePane === "thread"
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200",
-                    ].join(" ")}
-                    onClick={() => setMobilePane("thread")}
-                  >
-                    Thread
-                  </button>
-                  <button
-                    type="button"
-                    className={[
-                      "rounded-full px-3 py-1 text-[12px] font-semibold transition",
-                      mobilePane === "subtasks"
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200",
-                    ].join(" ")}
-                    onClick={() => setMobilePane("subtasks")}
-                  >
-                    Sub-tasks ({directChildren.length})
-                  </button>
-                </div>
-              </div>
-            )}
-
             <div className="mt-2 flex min-h-0 flex-1 flex-col gap-3 md:flex-row">
               <div
                 className={[
@@ -446,105 +536,6 @@ export const SessionDetailPage: React.FC<{
                   hasSubtasks && mobilePane === "subtasks" ? "hidden md:flex" : "",
                 ].join(" ")}
               >
-                {/* Mobile-first compact header + collapsible details */}
-                <div className="md:hidden">
-                  <div className="flex items-center justify-between gap-2 rounded-[18px] border border-slate-200 bg-white px-3 py-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-[13px] font-semibold text-slate-900">
-                        {titleLabel}
-                      </div>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                        {createdAt && <span>{formatDisplayDate(createdAt)}</span>}
-                        {hasSubtasks && (
-                          <span>
-                            {directChildren.length} sub-tasks · {readyChildCount} ready ·{" "}
-                            {activeChildCount} active · {doneChildCount} done
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200"
-                      onClick={() => setMobileDetailsOpen((v) => !v)}
-                      aria-expanded={mobileDetailsOpen}
-                    >
-                      {mobileDetailsOpen ? "Hide details" : "Show details"}
-                    </button>
-                  </div>
-
-                  {mobileDetailsOpen && (
-                    <div className={`${detailPanelClassName} mt-2`}>
-                      <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                        <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                          Title
-                        </span>
-                        <span className="min-w-0 flex-1 break-words">
-                          {session.title || "Untitled session"}
-                        </span>
-                      </div>
-                      {session.status && (
-                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                            Status
-                          </span>
-                          <span className="min-w-0 flex-1 break-words">{session.status}</span>
-                        </div>
-                      )}
-                      {session.directory && (
-                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                            Directory
-                          </span>
-                          <span className="min-w-0 flex-1 break-all font-mono">
-                            {session.directory}
-                          </span>
-                        </div>
-                      )}
-                      {session.projectId && (
-                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                            Project
-                          </span>
-                          <span className="min-w-0 flex-1 break-all font-mono">
-                            {session.projectId}
-                          </span>
-                        </div>
-                      )}
-                      {session.rootId && session.rootId !== session.id && (
-                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                            Root session
-                          </span>
-                          <span className="min-w-0 flex-1 break-all font-mono">
-                            {session.rootId}
-                          </span>
-                        </div>
-                      )}
-                      {createdAt && (
-                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                            Created
-                          </span>
-                          <span className="min-w-0 flex-1 break-words">
-                            {formatDisplayDate(createdAt)}
-                          </span>
-                        </div>
-                      )}
-                      {updatedAt && (
-                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                            Last updated
-                          </span>
-                          <span className="min-w-0 flex-1 break-words">
-                            {formatDisplayDate(updatedAt)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
                 {/* Desktop metadata panel */}
                 <div className={`${detailPanelClassName} hidden md:flex`}>
                   <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
@@ -613,8 +604,8 @@ export const SessionDetailPage: React.FC<{
                         Sub-tasks
                       </span>
                       <span className="min-w-0 flex-1 text-[12px] text-slate-600">
-                        {directChildren.length} direct children · {readyChildCount} ready ·{" "}
-                        {activeChildCount} active · {doneChildCount} done
+                        {directChildren.length} direct children · {activeChildCount} active ·{" "}
+                        {readyChildCount} ready
                       </span>
                     </div>
                   )}
@@ -744,39 +735,31 @@ export const SessionDetailPage: React.FC<{
                 </div>
               )}
 
-              <div className={detailPanelClassName}>
-                <textarea
-                  className="min-h-[88px] w-full max-h-[180px] resize-y rounded-[14px] border border-slate-300 bg-white px-[13px] py-3 text-slate-900 placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-200/60"
-                  placeholder="Add a comment or ask the session to continue…"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  rows={3}
-                  disabled={submitting}
-                />
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <textarea
+                    className="min-h-[72px] w-full max-h-[180px] resize-y rounded-[14px] border border-slate-300 bg-white px-[13px] py-3 pr-[92px] pb-[52px] text-slate-900 placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-200/60"
+                    placeholder="Write a message…"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    rows={2}
+                    disabled={submitting}
+                  />
+                  <button
+                    type="button"
+                    className="absolute bottom-3 right-3 rounded-full border border-transparent bg-blue-600 px-[14px] py-2 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(37,99,235,0.18)] transition hover:bg-blue-700 disabled:cursor-default disabled:opacity-55 disabled:shadow-none"
+                    disabled={submitting || !input.trim()}
+                    onClick={() => handleSubmit()}
+                  >
+                    {submitting ? "Sending…" : "Send"}
+                  </button>
+                </div>
                 {submitError && (
                   <div className={errorClassName}>
                     <div>Couldn&apos;t send message.</div>
                     <div className="text-xs text-amber-700">{submitError}</div>
                   </div>
                 )}
-                <div className="flex flex-wrap justify-end gap-2">
-                  <button
-                    type="button"
-                    className={`${baseButtonClassName} border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900`}
-                    disabled={submitting || !input.trim()}
-                    onClick={() => handleSubmit(true)}
-                  >
-                    {submitting ? "Sending…" : "Add comment only"}
-                  </button>
-                  <button
-                    type="button"
-                    className={`${baseButtonClassName} border-transparent bg-blue-600 text-white shadow-[0_10px_20px_rgba(37,99,235,0.18)] hover:bg-blue-700`}
-                    disabled={submitting || !input.trim()}
-                    onClick={() => handleSubmit(false)}
-                  >
-                    {submitting ? "Continuing…" : "Continue session"}
-                  </button>
-                </div>
               </div>
             </div>
               </div>
