@@ -858,14 +858,10 @@ export const SessionDetailPage: React.FC<{
                                 </span>
                               )}
                             </div>
-                            <div className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-[1.55] text-slate-900">
-                              {textParts.map((p, idx) => (
-                                <React.Fragment key={idx}>
-                                  {idx > 0 ? "\n" : ""}
-                                  {p.text}
-                                </React.Fragment>
-                              ))}
-                            </div>
+                            <Markdown
+                              content={textParts.map((p) => p.text).join("\n")}
+                              className="mt-1 text-slate-900"
+                            />
                           </div>
                         ) : (
                           <div className="w-full max-w-[860px]">
