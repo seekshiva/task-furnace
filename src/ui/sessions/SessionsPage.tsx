@@ -199,6 +199,7 @@ const SessionCard: React.FC<{
   session: Session;
   statusEntry: SessionStatusMap[string] | undefined;
   navigate: (path: string) => void;
+  directAgentCount: number;
   subtreeSize: number;
   doneCount: number;
   activeCount: number;
@@ -212,6 +213,7 @@ const SessionCard: React.FC<{
   session,
   statusEntry,
   navigate,
+  directAgentCount,
   subtreeSize,
   doneCount,
   activeCount,
@@ -230,7 +232,7 @@ const SessionCard: React.FC<{
   const completedRatio =
     totalChildrenCount > 0 ? readyChildrenCount / totalChildrenCount : 0;
   const completedPercent = Math.round(completedRatio * 100);
-  const hasSubtree = subtreeSize > 1;
+  const hasSubtree = directAgentCount > 0;
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -261,7 +263,7 @@ const SessionCard: React.FC<{
                   isTreeExpanded ? "Hide sub-agent sessions" : "Show sub-agent sessions"
                 }
               >
-                <span>{subtreeSize - 1} sub-agents</span>
+                <span>{directAgentCount} sub-agents</span>
                 <span className="text-[12px] text-slate-500">{isTreeExpanded ? "▾" : "▸"}</span>
               </button>
             )}
@@ -496,6 +498,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
       let activeCount = 0;
       let readyChildrenCount = 0;
       const directChildren = getDirectChildren(session.id);
+      const directAgentCount = directChildren.length;
 
       for (const item of subtree) {
         const itemStatus = sessionStatus[item.id];
@@ -516,6 +519,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
         treeMeta?: Record<
           string,
           {
+            directAgentCount: number;
             subtreeSize: number;
             doneCount: number;
             activeCount: number;
@@ -529,6 +533,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
         treeMeta?: Record<
           string,
           {
+            directAgentCount: number;
             subtreeSize: number;
             doneCount: number;
             activeCount: number;
@@ -538,6 +543,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
           }
         >;
       }).treeMeta![session.id] = {
+        directAgentCount,
         subtreeSize: subtree.length,
         doneCount,
         activeCount,
@@ -575,6 +581,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
             treeMeta?: Record<
               string,
               {
+                directAgentCount: number;
                 subtreeSize: number;
                 doneCount: number;
                 activeCount: number;
@@ -588,6 +595,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
         treeMeta: Record<
           string,
           {
+            directAgentCount: number;
             subtreeSize: number;
             doneCount: number;
             activeCount: number;
@@ -679,6 +687,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                                       treeMeta?: Record<
                                         string,
                                         {
+                                          directAgentCount: number;
                                           subtreeSize: number;
                                           doneCount: number;
                                           activeCount: number;
@@ -689,6 +698,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                                       >;
                                     }).treeMeta ?? {};
                                   const meta = treeMeta[session.id] ?? {
+                                    directAgentCount: 0,
                                     subtreeSize: 1,
                                     doneCount: 0,
                                     activeCount: 0,
@@ -703,6 +713,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                                       session={session}
                                       statusEntry={sessionStatus[session.id]}
                                       navigate={navigate}
+                                      directAgentCount={meta.directAgentCount}
                                       subtreeSize={meta.subtreeSize}
                                       doneCount={meta.doneCount}
                                       activeCount={meta.activeCount}

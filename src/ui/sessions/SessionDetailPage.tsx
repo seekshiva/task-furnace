@@ -97,6 +97,9 @@ export const SessionDetailPage: React.FC<{
   const [loadingSubtasks, setLoadingSubtasks] = useState(false);
   const [mobilePane, setMobilePane] = useState<"thread" | "subtasks">("thread");
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const [expandedSubAgentLists, setExpandedSubAgentLists] = useState<Record<string, boolean>>(
+    {},
+  );
   const messageListRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -204,6 +207,22 @@ export const SessionDetailPage: React.FC<{
       .filter((s) => getSessionParentId(s) === sessionId)
       .sort((l, r) => getChronologicalTimestamp(l) - getChronologicalTimestamp(r));
   }, [allSessions, sessionId]);
+
+  const directChildrenByParentId = useMemo(() => {
+    const map = new Map<string, Session[]>();
+    if (!allSessions) return map;
+    for (const s of allSessions) {
+      const parentId = getSessionParentId(s);
+      if (!parentId) continue;
+      const list = map.get(parentId) ?? [];
+      list.push(s);
+      map.set(parentId, list);
+    }
+    for (const list of map.values()) {
+      list.sort((l, r) => getChronologicalTimestamp(l) - getChronologicalTimestamp(r));
+    }
+    return map;
+  }, [allSessions]);
 
   const childColumns = useMemo(() => {
     const columns: Record<ChildColumnKey, Session[]> = {
@@ -768,6 +787,7 @@ export const SessionDetailPage: React.FC<{
                 className={[
                   "min-h-0 flex-1",
                   hasSubtasks && mobilePane === "thread" ? "hidden md:block" : "",
+                  !hasSubtasks ? "hidden md:block" : "",
                 ].join(" ")}
               >
                 <div className="flex min-h-0 flex-1 flex-col rounded-[18px] border border-slate-200 bg-slate-50 p-[14px]">
@@ -826,31 +846,109 @@ export const SessionDetailPage: React.FC<{
                                 );
                                 const statusLabel = normalized.label ?? normalized.type;
                                 const createdLabel = formatDisplayDate(getSessionCreatedAt(child));
+                                const directAgents = directChildrenByParentId.get(child.id) ?? [];
+                                const hasDirectAgents = directAgents.length > 0;
+                                const isExpanded = expandedSubAgentLists[child.id] ?? false;
 
                                 return (
-                                  <button
+                                  <div
                                     key={child.id}
-                                    type="button"
-                                    className="flex w-full shrink-0 cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left text-inherit shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:-translate-y-px hover:border-blue-200 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)]"
-                                    onClick={() => navigate(`/sessions/${child.id}`)}
+                                    className="flex w-full shrink-0 flex-col gap-2 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                                   >
-                                    <div className="flex min-w-0 flex-col gap-1">
-                                      <div className="text-sm font-semibold text-slate-900">
-                                        {child.title || child.id.slice(0, 8)}
-                                      </div>
-                                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                                          {statusLabel}
-                                        </span>
-                                      </div>
-                                      {createdLabel && (
-                                        <div className="text-xs text-slate-500">
-                                          Created {createdLabel}
+                                    <button
+                                      type="button"
+                                      className="flex w-full items-start justify-between gap-3 text-left text-inherit"
+                                      onClick={() => navigate(`/sessions/${child.id}`)}
+                                    >
+                                      <div className="flex min-w-0 flex-col gap-1">
+                                        <div className="text-sm font-semibold text-slate-900">
+                                          {child.title || child.id.slice(0, 8)}
                                         </div>
-                                      )}
-                                    </div>
-                                    <div className="shrink-0 text-lg text-slate-400">›</div>
-                                  </button>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                            {statusLabel}
+                                          </span>
+                                        </div>
+                                        {createdLabel && (
+                                          <div className="text-xs text-slate-500">
+                                            Created {createdLabel}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="shrink-0 text-lg text-slate-400">›</div>
+                                    </button>
+
+                                    {hasDirectAgents && (
+                                      <div className="flex items-center justify-between gap-2">
+                                        <button
+                                          type="button"
+                                          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 transition hover:bg-slate-200"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setExpandedSubAgentLists((prev) => ({
+                                              ...prev,
+                                              [child.id]: !(prev[child.id] ?? false),
+                                            }));
+                                          }}
+                                          aria-expanded={isExpanded}
+                                          aria-label={
+                                            isExpanded
+                                              ? "Hide sub-agent sessions"
+                                              : "Show sub-agent sessions"
+                                          }
+                                        >
+                                          <span>{directAgents.length} sub-agents</span>
+                                          <span className="text-[12px] text-slate-500">
+                                            {isExpanded ? "▾" : "▸"}
+                                          </span>
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {hasDirectAgents && isExpanded && (
+                                      <div className="flex flex-col gap-1 rounded-[12px] border border-slate-200 bg-slate-50 px-2.5 py-2">
+                                        <div className="px-0.5 text-[11px] font-semibold text-slate-500">
+                                          Sub-agents (oldest first)
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                          {directAgents.map((agent) => {
+                                            const agentCreatedAt = formatDisplayDate(
+                                              getSessionCreatedAt(agent),
+                                            );
+                                            const agentNormalized = normalizeSessionStatus(
+                                              agent,
+                                              sessionStatus[agent.id],
+                                            );
+                                            const agentStatusLabel =
+                                              agentNormalized.label ?? agentNormalized.type;
+
+                                            return (
+                                              <button
+                                                key={agent.id}
+                                                type="button"
+                                                className="flex items-center justify-between gap-2 rounded-[12px] border border-slate-200 bg-white px-2.5 py-1.5 text-left text-[12px] text-slate-700 transition hover:border-blue-200 hover:bg-blue-50/60"
+                                                onClick={() => navigate(`/sessions/${agent.id}`)}
+                                              >
+                                                <div className="min-w-0 flex-1">
+                                                  <div className="truncate font-medium">
+                                                    {agent.title || agent.id.slice(0, 8)}
+                                                  </div>
+                                                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                                    <span className="rounded-full bg-emerald-100 px-2 py-[2px] text-[10px] font-semibold text-emerald-800">
+                                                      {agentStatusLabel}
+                                                    </span>
+                                                    {agentCreatedAt && <span>{agentCreatedAt}</span>}
+                                                  </div>
+                                                </div>
+                                                <span className="shrink-0 text-slate-400">›</span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 );
                               })}
                             </div>
