@@ -6,7 +6,7 @@ import {
   normalizeSessionStatus,
   isActiveSessionStatus,
 } from "./types";
-import { formatDisplayDate } from "../date";
+import { formatDisplayDate, formatDisplayTimestamp } from "../date";
 import type {
   Session,
   SessionMessage,
@@ -413,7 +413,7 @@ export const SessionDetailPage: React.FC<{
               )}
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-              {createdAt && <span>{formatDisplayDate(createdAt)}</span>}
+              {createdAt && <span>{formatDisplayTimestamp(createdAt) ?? formatDisplayDate(createdAt)}</span>}
             </div>
           </div>
 
