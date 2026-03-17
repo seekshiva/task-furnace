@@ -3,12 +3,16 @@ export type Session = {
   title?: string | null;
   status?: string | null;
   time?: {
-    created?: string | null;
-    updated?: string | null;
+    created?: string | number | null;
+    updated?: string | number | null;
   } | null;
   directory?: string | null;
   projectId?: string | null;
+  projectID?: string | null;
   rootId?: string | null;
+  rootID?: string | null;
+  parentId?: string | null;
+  parentID?: string | null;
 };
 
 export type Project = {
@@ -98,10 +102,22 @@ export function isActiveSessionStatus(status: NormalizedSessionStatus): boolean 
 }
 
 export function getSessionCreatedAt(session: Session): string | null {
-  return session.time?.created ?? null;
+  const value = session.time?.created ?? null;
+  if (value === null || value === undefined) return null;
+  return typeof value === "number" ? new Date(value).toISOString() : value;
 }
 
 export function getSessionUpdatedAt(session: Session): string | null {
-  return session.time?.updated ?? null;
+  const value = session.time?.updated ?? null;
+  if (value === null || value === undefined) return null;
+  return typeof value === "number" ? new Date(value).toISOString() : value;
+}
+
+export function getSessionParentId(session: Session): string | null {
+  return session.parentID ?? session.parentId ?? null;
+}
+
+export function getSessionRootId(session: Session): string | null {
+  return session.rootID ?? session.rootId ?? null;
 }
 

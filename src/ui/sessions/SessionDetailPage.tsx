@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { getSessionCreatedAt, getSessionUpdatedAt } from "./types";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { getSessionCreatedAt, getSessionParentId, getSessionUpdatedAt } from "./types";
 import { formatDisplayDate } from "../date";
 import type { Session, SessionMessage } from "./types";
 
@@ -31,6 +31,9 @@ export const SessionDetailPage: React.FC<{
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [sseSupported, setSseSupported] = useState<boolean | null>(null);
+  const [relatedSessions, setRelatedSessions] = useState<Session[] | null>(null);
+  const [relatedSessionsError, setRelatedSessionsError] = useState<string | null>(null);
+  const [loadingRelatedSessions, setLoadingRelatedSessions] = useState(false);
   const messageListRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -66,6 +69,109 @@ export const SessionDetailPage: React.FC<{
       cancelled = true;
     };
   }, [sessionId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRelatedSessions(currentSession: Session | null) {
+      if (!currentSession) {
+        setRelatedSessions(null);
+        setRelatedSessionsError(null);
+        return;
+      }
+
+      try {
+        setLoadingRelatedSessions(true);
+        setRelatedSessionsError(null);
+
+        const res = await fetch("/api/sessions");
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`);
+        }
+
+        const body = (await res.json()) as { sessions?: Session[] };
+        if (cancelled) return;
+
+        const all = body.sessions ?? [];
+        const byId = new Map<string, Session>();
+        for (const s of all) {
+          byId.set(s.id, s);
+        }
+
+        const childrenById = new Map<string, Session[]>();
+        for (const s of all) {
+          const parentId = getSessionParentId(s);
+          if (!parentId) continue;
+          const list = childrenById.get(parentId) ?? [];
+          list.push(s);
+          childrenById.set(parentId, list);
+        }
+
+        // Find the actual root by walking parent links.
+        let root: Session = currentSession;
+        const seen = new Set<string>();
+        while (true) {
+          if (seen.has(root.id)) break;
+          seen.add(root.id);
+          const parentId = getSessionParentId(root);
+          if (!parentId) break;
+          const parent = byId.get(parentId);
+          if (!parent) break;
+          root = parent;
+        }
+
+        // Collect the entire descendant set from the root.
+        const out: Session[] = [];
+        const stack: Session[] = [root];
+        const seenTree = new Set<string>();
+
+        while (stack.length > 0) {
+          const current = stack.pop();
+          if (!current) continue;
+          if (seenTree.has(current.id)) continue;
+          seenTree.add(current.id);
+          out.push(current);
+          const kids = childrenById.get(current.id) ?? [];
+          for (const child of kids) {
+            stack.push(child);
+          }
+        }
+
+        const inTree = out.sort((left, right) => {
+          const leftCreated = getSessionCreatedAt(left);
+          const rightCreated = getSessionCreatedAt(right);
+          const leftTs = leftCreated ? new Date(leftCreated).getTime() : Number.POSITIVE_INFINITY;
+          const rightTs = rightCreated ? new Date(rightCreated).getTime() : Number.POSITIVE_INFINITY;
+          return leftTs - rightTs;
+        });
+
+        setRelatedSessions(inTree);
+      } catch (err) {
+        if (!cancelled) {
+          setRelatedSessionsError(
+            (err as Error).message ?? "Failed to load related sessions for this tree",
+          );
+          setRelatedSessions(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingRelatedSessions(false);
+        }
+      }
+    }
+
+    void loadRelatedSessions(session);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  const rootSessionId = useMemo(() => {
+    if (!relatedSessions || relatedSessions.length === 0) return null;
+    const first = relatedSessions[0];
+    return first ? first.id : null;
+  }, [relatedSessions]);
 
   async function reloadMessages(currentSessionId: string, opts?: { background?: boolean }) {
     const listEl = messageListRef.current;
@@ -296,6 +402,85 @@ export const SessionDetailPage: React.FC<{
                   </span>
                   <span className="min-w-0 flex-1 break-words">
                     {formatDisplayDate(updatedAt)}
+                  </span>
+                </div>
+              )}
+              {relatedSessions && relatedSessions.length > 0 && (
+                <div className="mt-1 flex flex-col gap-1.5">
+                  <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                    <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                      Sub-agent tree
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 text-[12px] text-slate-500">
+                        {relatedSessions.length} sessions in this tree, oldest first.
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {relatedSessions.map((s) => {
+                          const created = getSessionCreatedAt(s);
+                          const createdLabel = created ? formatDisplayDate(created) : null;
+                          const isRoot = rootSessionId ? s.id === rootSessionId : !getSessionParentId(s);
+                          const isCurrent = s.id === session.id;
+
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              className={[
+                                "flex items-center justify-between gap-2 rounded-[12px] border px-2.5 py-1.5 text-left text-[12px] transition",
+                                isCurrent
+                                  ? "border-blue-300 bg-blue-50 text-slate-900"
+                                  : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50/60",
+                              ].join(" ")}
+                              onClick={() => {
+                                if (s.id !== session.id) {
+                                  navigate(`/sessions/${s.id}`);
+                                }
+                              }}
+                            >
+                              <div className="flex min-w-0 flex-col">
+                                <div className="flex items-center gap-1">
+                                  {isRoot && (
+                                    <span className="inline-flex items-center rounded-full bg-slate-900 px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-[0.08em] text-white">
+                                      Root
+                                    </span>
+                                  )}
+                                  <span className="truncate font-medium">
+                                    {s.title || s.id.slice(0, 8)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                                  {createdLabel && <span>{createdLabel}</span>}
+                                  {!createdLabel && <span>Created time unknown</span>}
+                                  {s.id === session.id && (
+                                    <span className="rounded-full bg-blue-100 px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-[0.08em] text-blue-700">
+                                      Viewing
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="shrink-0 text-slate-400 text-[14px]">›</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {loadingRelatedSessions && (
+                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto" />
+                  <span className="min-w-0 flex-1 text-[12px] text-slate-500">
+                    Loading sub-agent tree…
+                  </span>
+                </div>
+              )}
+              {relatedSessionsError && !loadingRelatedSessions && (
+                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto" />
+                  <span className="min-w-0 flex-1 text-[12px] text-amber-700">
+                    {relatedSessionsError}
                   </span>
                 </div>
               )}

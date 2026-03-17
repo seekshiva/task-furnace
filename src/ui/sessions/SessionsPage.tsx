@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   getSessionCreatedAt,
+  getSessionParentId,
   normalizeSessionStatus,
   isActiveSessionStatus,
 } from "./types";
@@ -66,6 +67,19 @@ function getSessionTimestamp(createdAt?: string | null): number {
   }
 
   return date.getTime();
+}
+
+function isTopLevelSession(session: Session): boolean {
+  const parentId = getSessionParentId(session);
+  return !parentId;
+}
+
+function getChronologicalTimestamp(session: Session): number {
+  const createdAt = getSessionCreatedAt(session);
+  if (!createdAt) return Number.POSITIVE_INFINITY;
+  const date = new Date(createdAt);
+  const ms = date.getTime();
+  return Number.isNaN(ms) ? Number.POSITIVE_INFINITY : ms;
 }
 
 function toLocalDateKey(date: Date): string {
@@ -185,30 +199,122 @@ const SessionCard: React.FC<{
   session: Session;
   statusEntry: SessionStatusMap[string] | undefined;
   navigate: (path: string) => void;
-}> = ({ session, statusEntry, navigate }) => {
+  subtreeSize: number;
+  doneCount: number;
+  activeCount: number;
+  subSessions: Session[];
+  isTreeExpanded: boolean;
+  onToggleTree: () => void;
+  getSessionStatusLabel: (session: Session) => string;
+}> = ({
+  session,
+  statusEntry,
+  navigate,
+  subtreeSize,
+  doneCount,
+  activeCount,
+  subSessions,
+  isTreeExpanded,
+  onToggleTree,
+  getSessionStatusLabel,
+}) => {
   const normalized = normalizeSessionStatus(session, statusEntry);
   const statusLabel = normalized.label ?? normalized.type;
   const createdLabel = formatDisplayDate(getSessionCreatedAt(session));
 
+  const totalInTree = Math.max(subtreeSize, 1);
+  const completedRatio = totalInTree > 0 ? doneCount / totalInTree : 0;
+  const completedPercent = Math.round(completedRatio * 100);
+  const hasSubtree = subtreeSize > 1;
+
   return (
-    <button
-      type="button"
-      className={sessionRowClassName}
-      onClick={() => navigate(`/sessions/${session.id}`)}
-    >
-      <div className="flex min-w-0 flex-col gap-1">
-        <div className="text-sm font-semibold text-slate-900">
-          {session.title || session.id.slice(0, 8)}
+    <div className="flex w-full flex-col gap-2">
+      <button
+        type="button"
+        className={sessionRowClassName}
+        onClick={() => navigate(`/sessions/${session.id}`)}
+      >
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="text-sm font-semibold text-slate-900">
+            {session.title || session.id.slice(0, 8)}
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs text-slate-500 items-center">
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+              {statusLabel}
+            </span>
+            {hasSubtree && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 transition hover:bg-slate-200"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleTree();
+                }}
+                aria-expanded={hasSubtree ? isTreeExpanded : undefined}
+                aria-label={
+                  isTreeExpanded ? "Hide sub-agent sessions" : "Show sub-agent sessions"
+                }
+              >
+                <span>{subtreeSize - 1} sub-agents</span>
+                <span className="text-[12px] text-slate-500">{isTreeExpanded ? "▾" : "▸"}</span>
+              </button>
+            )}
+          </div>
+          {hasSubtree && (
+            <div className="mt-1 flex items-center gap-2">
+              <div className="relative h-[6px] w-24 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-blue-500 transition-[width] duration-150"
+                  style={{ width: `${completedPercent}%` }}
+                />
+              </div>
+              <span className="text-[11px] text-slate-500">
+                {doneCount}/{subtreeSize} done
+                {activeCount > 0 ? ` · ${activeCount} active` : ""}
+              </span>
+            </div>
+          )}
+          {createdLabel && <div className="text-xs text-slate-500">Created {createdLabel}</div>}
         </div>
-        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-            {statusLabel}
-          </span>
+        <div className="shrink-0 text-lg text-slate-400">›</div>
+      </button>
+
+      {hasSubtree && isTreeExpanded && subSessions.length > 0 && (
+        <div className="ml-2.5 flex flex-col gap-1 rounded-[14px] border border-slate-200 bg-white px-2.5 py-2">
+          <div className="px-1 text-[11px] font-semibold text-slate-500">
+            Sub-agents (oldest first)
+          </div>
+          <div className="flex flex-col gap-1">
+            {subSessions.map((sub) => {
+              const createdAt = formatDisplayDate(getSessionCreatedAt(sub));
+              const subStatus = getSessionStatusLabel(sub);
+              return (
+                <button
+                  key={sub.id}
+                  type="button"
+                  className="flex items-center justify-between gap-2 rounded-[12px] border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left text-[12px] text-slate-700 transition hover:border-blue-200 hover:bg-blue-50/60"
+                  onClick={() => navigate(`/sessions/${sub.id}`)}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">
+                      {sub.title || sub.id.slice(0, 8)}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                      <span className="rounded-full bg-emerald-100 px-2 py-[2px] text-[10px] font-semibold text-emerald-800">
+                        {subStatus}
+                      </span>
+                      {createdAt && <span>{createdAt}</span>}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-slate-400">›</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-        {createdLabel && <div className="text-xs text-slate-500">Created {createdLabel}</div>}
-      </div>
-      <div className="shrink-0 text-lg text-slate-400">›</div>
-    </button>
+      )}
+    </div>
   );
 };
 
@@ -221,6 +327,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
   const [sessionStatus, setSessionStatus] = useState<SessionStatusMap>({});
   const [activity, setActivity] = useState<SessionActivityMap>({});
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [expandedTrees, setExpandedTrees] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -320,8 +427,44 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
 
   const sessionGroups = useMemo(() => {
     const groupsByKey = new Map<string, SessionGroup>();
+    const sessionsById = new Map<string, Session>();
+    const childrenById = new Map<string, Session[]>();
 
     for (const session of sessions) {
+      sessionsById.set(session.id, session);
+    }
+
+    for (const session of sessions) {
+      const parentId = getSessionParentId(session);
+      if (!parentId) continue;
+      const list = childrenById.get(parentId) ?? [];
+      list.push(session);
+      childrenById.set(parentId, list);
+    }
+
+    function getSubtree(root: Session): Session[] {
+      const out: Session[] = [];
+      const stack: Session[] = [root];
+      const seen = new Set<string>();
+
+      while (stack.length > 0) {
+        const current = stack.pop();
+        if (!current) continue;
+        if (seen.has(current.id)) continue;
+        seen.add(current.id);
+        out.push(current);
+        const children = childrenById.get(current.id) ?? [];
+        for (const child of children) {
+          stack.push(child);
+        }
+      }
+
+      return out;
+    }
+
+    const topLevelSessions = sessions.filter(isTopLevelSession);
+
+    for (const session of topLevelSessions) {
       const dateKey = getSessionDateKey(session);
       const statusEntry = sessionStatus[session.id];
       const activityEntry = activity[session.id];
@@ -339,6 +482,38 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
       }
 
       const columnKey = getSessionColumnKey(session, statusEntry, activityEntry);
+      const subtree = getSubtree(session);
+      let doneCount = 0;
+      let activeCount = 0;
+
+      for (const item of subtree) {
+        const itemStatus = sessionStatus[item.id];
+        const itemActivity = activity[item.id];
+        const itemColumn = getSessionColumnKey(item, itemStatus, itemActivity);
+        if (itemColumn === "done") doneCount += 1;
+        if (itemColumn === "active") activeCount += 1;
+      }
+
+      (group as SessionGroup & {
+        treeMeta?: Record<
+          string,
+          { subtreeSize: number; doneCount: number; activeCount: number; subSessions: Session[] }
+        >;
+      }).treeMeta ??= {};
+      (group as SessionGroup & {
+        treeMeta?: Record<
+          string,
+          { subtreeSize: number; doneCount: number; activeCount: number; subSessions: Session[] }
+        >;
+      }).treeMeta![session.id] = {
+        subtreeSize: subtree.length,
+        doneCount,
+        activeCount,
+        subSessions: subtree
+          .filter((s) => s.id !== session.id)
+          .sort((left, right) => getChronologicalTimestamp(left) - getChronologicalTimestamp(right)),
+      };
+
       group.columns[columnKey].push(session);
       group.totalCount += 1;
     }
@@ -358,7 +533,33 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
       }
     }
 
-    return groups;
+    return groups.map((group) => {
+      return {
+        ...group,
+        treeMeta:
+          (group as SessionGroup & {
+            treeMeta?: Record<
+              string,
+              {
+                subtreeSize: number;
+                doneCount: number;
+                activeCount: number;
+                subSessions: Session[];
+              }
+            >;
+          }).treeMeta ?? {},
+      } as SessionGroup & {
+        treeMeta: Record<
+          string,
+          {
+            subtreeSize: number;
+            doneCount: number;
+            activeCount: number;
+            subSessions: Session[];
+          }
+        >;
+      };
+    });
   }, [activity, sessionStatus, sessions]);
 
   useEffect(() => {
@@ -434,14 +635,53 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                                 {columnSessions.length === 0 && (
                                   <div className={emptyPaneClassName}>{column.emptyMessage}</div>
                                 )}
-                                {columnSessions.map((session) => (
-                                  <SessionCard
-                                    key={session.id}
-                                    session={session}
-                                    statusEntry={sessionStatus[session.id]}
-                                    navigate={navigate}
-                                  />
-                                ))}
+                                {columnSessions.map((session) => {
+                                  const treeMeta =
+                                    (group as SessionGroup & {
+                                      treeMeta?: Record<
+                                        string,
+                                        {
+                                          subtreeSize: number;
+                                          doneCount: number;
+                                          activeCount: number;
+                                          subSessions: Session[];
+                                        }
+                                      >;
+                                    }).treeMeta ?? {};
+                                  const meta = treeMeta[session.id] ?? {
+                                    subtreeSize: 1,
+                                    doneCount: 0,
+                                    activeCount: 0,
+                                    subSessions: [],
+                                  };
+
+                                  return (
+                                    <SessionCard
+                                      key={session.id}
+                                      session={session}
+                                      statusEntry={sessionStatus[session.id]}
+                                      navigate={navigate}
+                                      subtreeSize={meta.subtreeSize}
+                                      doneCount={meta.doneCount}
+                                      activeCount={meta.activeCount}
+                                      subSessions={meta.subSessions}
+                                      isTreeExpanded={expandedTrees[session.id] ?? false}
+                                      onToggleTree={() =>
+                                        setExpandedTrees((prev) => ({
+                                          ...prev,
+                                          [session.id]: !(prev[session.id] ?? false),
+                                        }))
+                                      }
+                                      getSessionStatusLabel={(s) => {
+                                        const normalized = normalizeSessionStatus(
+                                          s,
+                                          sessionStatus[s.id],
+                                        );
+                                        return normalized.label ?? normalized.type;
+                                      }}
+                                    />
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>
