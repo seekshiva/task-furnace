@@ -549,9 +549,9 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
         activeCount,
         readyChildrenCount,
         totalChildrenCount: directChildren.length,
-        subSessions: subtree
-          .filter((s) => s.id !== session.id)
-          .sort((left, right) => getChronologicalTimestamp(left) - getChronologicalTimestamp(right)),
+        subSessions: directChildren.sort(
+          (left, right) => getChronologicalTimestamp(left) - getChronologicalTimestamp(right),
+        ),
       };
 
       group.columns[columnKey].push(session);
