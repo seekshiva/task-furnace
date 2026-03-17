@@ -12,6 +12,7 @@ import {
   isToolPart,
 } from "./types";
 import { formatDisplayDate, formatDisplayTimestamp } from "../date";
+import { Markdown } from "../Markdown";
 import type {
   Session,
   SessionMessage,
@@ -244,7 +245,12 @@ export const SessionDetailPage: React.FC<{
     {},
   );
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const didAutoScrollMessagesRef = useRef<string | null>(null);
   const subtaskBoardScrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    didAutoScrollMessagesRef.current = null;
+  }, [sessionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -467,6 +473,23 @@ export const SessionDetailPage: React.FC<{
       cancelled = true;
     };
   }, [sessionId]);
+
+  useEffect(() => {
+    if (loadingMessages) return;
+    if (messagesError) return;
+    if (messages.length === 0) return;
+    if (didAutoScrollMessagesRef.current === sessionId) return;
+
+    const listEl = messageListRef.current;
+    if (!listEl) return;
+
+    window.requestAnimationFrame(() => {
+      const el = messageListRef.current;
+      if (!el) return;
+      el.scrollTop = el.scrollHeight;
+      didAutoScrollMessagesRef.current = sessionId;
+    });
+  }, [loadingMessages, messagesError, messages.length, sessionId]);
 
   useEffect(() => {
     // Detect basic SSE support once on mount.
@@ -858,14 +881,10 @@ export const SessionDetailPage: React.FC<{
                             )}
 
                             {textParts.length > 0 && (
-                              <div className="whitespace-pre-wrap text-[13px] leading-[1.6] text-slate-900">
-                                {textParts.map((p, idx) => (
-                                  <React.Fragment key={idx}>
-                                    {idx > 0 ? "\n" : ""}
-                                    {p.text}
-                                  </React.Fragment>
-                                ))}
-                              </div>
+                              <Markdown
+                                content={textParts.map((p) => p.text).join("\n")}
+                                className="text-slate-900"
+                              />
                             )}
 
                             {otherParts.length > 0 && (
