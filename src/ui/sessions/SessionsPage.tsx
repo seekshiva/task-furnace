@@ -202,6 +202,8 @@ const SessionCard: React.FC<{
   subtreeSize: number;
   doneCount: number;
   activeCount: number;
+  readyChildrenCount: number;
+  totalChildrenCount: number;
   subSessions: Session[];
   isTreeExpanded: boolean;
   onToggleTree: () => void;
@@ -213,6 +215,8 @@ const SessionCard: React.FC<{
   subtreeSize,
   doneCount,
   activeCount,
+  readyChildrenCount,
+  totalChildrenCount,
   subSessions,
   isTreeExpanded,
   onToggleTree,
@@ -223,7 +227,8 @@ const SessionCard: React.FC<{
   const createdLabel = formatDisplayDate(getSessionCreatedAt(session));
 
   const totalInTree = Math.max(subtreeSize, 1);
-  const completedRatio = totalInTree > 0 ? doneCount / totalInTree : 0;
+  const completedRatio =
+    totalChildrenCount > 0 ? readyChildrenCount / totalChildrenCount : 0;
   const completedPercent = Math.round(completedRatio * 100);
   const hasSubtree = subtreeSize > 1;
 
@@ -270,7 +275,7 @@ const SessionCard: React.FC<{
                 />
               </div>
               <span className="text-[11px] text-slate-500">
-                {doneCount}/{subtreeSize} done
+                {readyChildrenCount}/{totalChildrenCount} ready
                 {activeCount > 0 ? ` · ${activeCount} active` : ""}
               </span>
             </div>
@@ -462,6 +467,10 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
       return out;
     }
 
+    function getDirectChildren(parentId: string): Session[] {
+      return (childrenById.get(parentId) ?? []).slice();
+    }
+
     const topLevelSessions = sessions.filter(isTopLevelSession);
 
     for (const session of topLevelSessions) {
@@ -485,6 +494,8 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
       const subtree = getSubtree(session);
       let doneCount = 0;
       let activeCount = 0;
+      let readyChildrenCount = 0;
+      const directChildren = getDirectChildren(session.id);
 
       for (const item of subtree) {
         const itemStatus = sessionStatus[item.id];
@@ -494,21 +505,44 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
         if (itemColumn === "active") activeCount += 1;
       }
 
+      for (const child of directChildren) {
+        const childStatus = sessionStatus[child.id];
+        const childActivity = activity[child.id];
+        const childColumn = getSessionColumnKey(child, childStatus, childActivity);
+        if (childColumn === "ready") readyChildrenCount += 1;
+      }
+
       (group as SessionGroup & {
         treeMeta?: Record<
           string,
-          { subtreeSize: number; doneCount: number; activeCount: number; subSessions: Session[] }
+          {
+            subtreeSize: number;
+            doneCount: number;
+            activeCount: number;
+            readyChildrenCount: number;
+            totalChildrenCount: number;
+            subSessions: Session[];
+          }
         >;
       }).treeMeta ??= {};
       (group as SessionGroup & {
         treeMeta?: Record<
           string,
-          { subtreeSize: number; doneCount: number; activeCount: number; subSessions: Session[] }
+          {
+            subtreeSize: number;
+            doneCount: number;
+            activeCount: number;
+            readyChildrenCount: number;
+            totalChildrenCount: number;
+            subSessions: Session[];
+          }
         >;
       }).treeMeta![session.id] = {
         subtreeSize: subtree.length,
         doneCount,
         activeCount,
+        readyChildrenCount,
+        totalChildrenCount: directChildren.length,
         subSessions: subtree
           .filter((s) => s.id !== session.id)
           .sort((left, right) => getChronologicalTimestamp(left) - getChronologicalTimestamp(right)),
@@ -544,6 +578,8 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                 subtreeSize: number;
                 doneCount: number;
                 activeCount: number;
+                readyChildrenCount: number;
+                totalChildrenCount: number;
                 subSessions: Session[];
               }
             >;
@@ -555,6 +591,8 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
             subtreeSize: number;
             doneCount: number;
             activeCount: number;
+            readyChildrenCount: number;
+            totalChildrenCount: number;
             subSessions: Session[];
           }
         >;
@@ -644,6 +682,8 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                                           subtreeSize: number;
                                           doneCount: number;
                                           activeCount: number;
+                                          readyChildrenCount: number;
+                                          totalChildrenCount: number;
                                           subSessions: Session[];
                                         }
                                       >;
@@ -652,6 +692,8 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                                     subtreeSize: 1,
                                     doneCount: 0,
                                     activeCount: 0,
+                                    readyChildrenCount: 0,
+                                    totalChildrenCount: 0,
                                     subSessions: [],
                                   };
 
@@ -664,6 +706,8 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
                                       subtreeSize={meta.subtreeSize}
                                       doneCount={meta.doneCount}
                                       activeCount={meta.activeCount}
+                                      readyChildrenCount={meta.readyChildrenCount}
+                                      totalChildrenCount={meta.totalChildrenCount}
                                       subSessions={meta.subSessions}
                                       isTreeExpanded={expandedTrees[session.id] ?? false}
                                       onToggleTree={() =>

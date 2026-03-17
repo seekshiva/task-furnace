@@ -96,6 +96,7 @@ export const SessionDetailPage: React.FC<{
   const [subtasksError, setSubtasksError] = useState<string | null>(null);
   const [loadingSubtasks, setLoadingSubtasks] = useState(false);
   const [mobilePane, setMobilePane] = useState<"thread" | "subtasks">("thread");
+  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const messageListRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -377,6 +378,7 @@ export const SessionDetailPage: React.FC<{
   const createdAt = session ? getSessionCreatedAt(session) : null;
   const updatedAt = session ? getSessionUpdatedAt(session) : null;
   const hasSubtasks = directChildren.length > 0;
+  const titleLabel = session?.title || (session ? session.id.slice(0, 8) : "Session");
 
   return (
     <section className="flex min-h-0 w-full flex-1 flex-col">
@@ -440,77 +442,185 @@ export const SessionDetailPage: React.FC<{
             <div className="mt-2 flex min-h-0 flex-1 flex-col gap-3 md:flex-row">
               <div
                 className={[
-                  "flex min-h-0 flex-1 flex-col gap-2.5",
+                  "flex min-h-0 flex-1 flex-col gap-2 max-md:gap-1.5",
                   hasSubtasks && mobilePane === "subtasks" ? "hidden md:flex" : "",
                 ].join(" ")}
               >
-                <div className={detailPanelClassName}>
-              <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Title</span>
-                <span className="min-w-0 flex-1 break-words">
-                  {session.title || "Untitled session"}
-                </span>
-              </div>
-              {session.status && (
-                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Status</span>
-                  <span className="min-w-0 flex-1 break-words">{session.status}</span>
-                </div>
-              )}
-              {session.directory && (
-                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                    Directory
-                  </span>
-                  <span className="min-w-0 flex-1 break-all font-mono">{session.directory}</span>
-                </div>
-              )}
-              {session.projectId && (
-                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Project</span>
-                  <span className="min-w-0 flex-1 break-all font-mono">
-                    {session.projectId}
-                  </span>
-                </div>
-              )}
-              {session.rootId && session.rootId !== session.id && (
-                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                    Root session
-                  </span>
-                  <span className="min-w-0 flex-1 break-all font-mono">{session.rootId}</span>
-                </div>
-              )}
-              {createdAt && (
-                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Created</span>
-                  <span className="min-w-0 flex-1 break-words">
-                    {formatDisplayDate(createdAt)}
-                  </span>
-                </div>
-              )}
-              {updatedAt && (
-                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                    Last updated
-                  </span>
-                  <span className="min-w-0 flex-1 break-words">
-                    {formatDisplayDate(updatedAt)}
-                  </span>
-                </div>
-              )}
-              {hasSubtasks && (
-                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Sub-tasks</span>
-                  <span className="min-w-0 flex-1 text-[12px] text-slate-600">
-                    {directChildren.length} direct children · {readyChildCount} ready ·{" "}
-                    {activeChildCount} active · {doneChildCount} done
-                  </span>
-                </div>
-              )}
+                {/* Mobile-first compact header + collapsible details */}
+                <div className="md:hidden">
+                  <div className="flex items-center justify-between gap-2 rounded-[18px] border border-slate-200 bg-white px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-semibold text-slate-900">
+                        {titleLabel}
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                        {createdAt && <span>{formatDisplayDate(createdAt)}</span>}
+                        {hasSubtasks && (
+                          <span>
+                            {directChildren.length} sub-tasks · {readyChildCount} ready ·{" "}
+                            {activeChildCount} active · {doneChildCount} done
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200"
+                      onClick={() => setMobileDetailsOpen((v) => !v)}
+                      aria-expanded={mobileDetailsOpen}
+                    >
+                      {mobileDetailsOpen ? "Hide details" : "Show details"}
+                    </button>
+                  </div>
+
+                  {mobileDetailsOpen && (
+                    <div className={`${detailPanelClassName} mt-2`}>
+                      <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                        <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                          Title
+                        </span>
+                        <span className="min-w-0 flex-1 break-words">
+                          {session.title || "Untitled session"}
+                        </span>
+                      </div>
+                      {session.status && (
+                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                            Status
+                          </span>
+                          <span className="min-w-0 flex-1 break-words">{session.status}</span>
+                        </div>
+                      )}
+                      {session.directory && (
+                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                            Directory
+                          </span>
+                          <span className="min-w-0 flex-1 break-all font-mono">
+                            {session.directory}
+                          </span>
+                        </div>
+                      )}
+                      {session.projectId && (
+                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                            Project
+                          </span>
+                          <span className="min-w-0 flex-1 break-all font-mono">
+                            {session.projectId}
+                          </span>
+                        </div>
+                      )}
+                      {session.rootId && session.rootId !== session.id && (
+                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                            Root session
+                          </span>
+                          <span className="min-w-0 flex-1 break-all font-mono">
+                            {session.rootId}
+                          </span>
+                        </div>
+                      )}
+                      {createdAt && (
+                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                            Created
+                          </span>
+                          <span className="min-w-0 flex-1 break-words">
+                            {formatDisplayDate(createdAt)}
+                          </span>
+                        </div>
+                      )}
+                      {updatedAt && (
+                        <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                          <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                            Last updated
+                          </span>
+                          <span className="min-w-0 flex-1 break-words">
+                            {formatDisplayDate(updatedAt)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+                {/* Desktop metadata panel */}
+                <div className={`${detailPanelClassName} hidden md:flex`}>
+                  <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                    <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Title</span>
+                    <span className="min-w-0 flex-1 break-words">
+                      {session.title || "Untitled session"}
+                    </span>
+                  </div>
+                  {session.status && (
+                    <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                        Status
+                      </span>
+                      <span className="min-w-0 flex-1 break-words">{session.status}</span>
+                    </div>
+                  )}
+                  {session.directory && (
+                    <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                        Directory
+                      </span>
+                      <span className="min-w-0 flex-1 break-all font-mono">{session.directory}</span>
+                    </div>
+                  )}
+                  {session.projectId && (
+                    <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                        Project
+                      </span>
+                      <span className="min-w-0 flex-1 break-all font-mono">
+                        {session.projectId}
+                      </span>
+                    </div>
+                  )}
+                  {session.rootId && session.rootId !== session.id && (
+                    <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                        Root session
+                      </span>
+                      <span className="min-w-0 flex-1 break-all font-mono">{session.rootId}</span>
+                    </div>
+                  )}
+                  {createdAt && (
+                    <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                        Created
+                      </span>
+                      <span className="min-w-0 flex-1 break-words">
+                        {formatDisplayDate(createdAt)}
+                      </span>
+                    </div>
+                  )}
+                  {updatedAt && (
+                    <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                        Last updated
+                      </span>
+                      <span className="min-w-0 flex-1 break-words">
+                        {formatDisplayDate(updatedAt)}
+                      </span>
+                    </div>
+                  )}
+                  {hasSubtasks && (
+                    <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
+                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                        Sub-tasks
+                      </span>
+                      <span className="min-w-0 flex-1 text-[12px] text-slate-600">
+                        {directChildren.length} direct children · {readyChildCount} ready ·{" "}
+                        {activeChildCount} active · {doneChildCount} done
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex min-h-0 flex-1 flex-col gap-2 max-md:gap-1.5">
               {loadingMessages && (
                 <div className={mutedTextClassName}>Loading messages…</div>
               )}
