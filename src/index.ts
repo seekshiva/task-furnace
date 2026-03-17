@@ -24,6 +24,28 @@ type SessionActivityStatus = {
 const sessionActivity = new Map<string, SessionActivityStatus>();
 let eventsSubscribed = false;
 
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const limit = Math.max(1, Math.floor(concurrency));
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+
+  const workers = new Array(Math.min(limit, items.length)).fill(null).map(async () => {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= items.length) return;
+      results[index] = await mapper(items[index] as T, index);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
 function updateSessionActivity(sessionID: string, statusType: string | null | undefined) {
   const now = Date.now();
   const lowered = (statusType ?? "").toLowerCase();
@@ -144,9 +166,54 @@ const server = Bun.serve({
     "/api/sessions": {
       GET: async () => {
         try {
-          const result = await opencodeClient.session.list();
-          const items = Array.isArray((result as any).data) ? (result as any).data : result;
-          return Response.json({ sessions: items });
+          const rootLimitRaw = process.env.SESSIONS_ROOT_LIMIT;
+          const rootLimit = Number.isFinite(Number(rootLimitRaw)) ? Number(rootLimitRaw) : 300;
+          const childConcurrencyRaw = process.env.SESSIONS_CHILD_CONCURRENCY;
+          const childConcurrency = Number.isFinite(Number(childConcurrencyRaw))
+            ? Number(childConcurrencyRaw)
+            : 8;
+
+          const listResult = await (opencodeClient as any).session.list({
+            roots: true,
+            limit: rootLimit,
+          });
+          const roots = Array.isArray((listResult as any).data)
+            ? ((listResult as any).data as any[])
+            : (listResult as any);
+
+          const childrenLists = await mapWithConcurrency(
+            roots,
+            childConcurrency,
+            async (root: any) => {
+              try {
+                const result = await (opencodeClient as any).session.children({
+                  path: { id: root.id },
+                });
+                const children = Array.isArray((result as any).data)
+                  ? ((result as any).data as any[])
+                  : (result as any);
+                return Array.isArray(children) ? children : [];
+              } catch (error) {
+                console.warn(`Failed to load child sessions for ${root?.id ?? "unknown"}`, error);
+                return [];
+              }
+            },
+          );
+
+          const sessionsById = new Map<string, any>();
+
+          for (const session of roots) {
+            if (!session?.id) continue;
+            sessionsById.set(session.id, session);
+          }
+          for (const list of childrenLists) {
+            for (const session of list) {
+              if (!session?.id) continue;
+              sessionsById.set(session.id, session);
+            }
+          }
+
+          return Response.json({ sessions: Array.from(sessionsById.values()) });
         } catch (error) {
           console.error("Failed to list opencode sessions", error);
           return new Response(
