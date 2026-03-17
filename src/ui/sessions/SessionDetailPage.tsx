@@ -424,8 +424,11 @@ export const SessionDetailPage: React.FC<{
           <button
             type="button"
             className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-2 text-[14px] font-semibold text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 hover:text-slate-900"
-            onClick={() => navigate("/sessions")}
-            aria-label="Back to all sessions"
+            onClick={() => {
+              const parentId = session ? getSessionParentId(session) : null;
+              navigate(parentId ? `/sessions/${parentId}` : "/sessions");
+            }}
+            aria-label="Back"
           >
             ←
           </button>
@@ -438,7 +441,7 @@ export const SessionDetailPage: React.FC<{
               {!loading && !error && session && (
                 <button
                   type="button"
-                  className="shrink-0 rounded-full bg-slate-100 p-1.5 text-slate-700 transition hover:bg-slate-200 md:hidden"
+                  className="shrink-0 rounded-full bg-slate-100 p-1.5 text-slate-700 transition hover:bg-slate-200"
                   onClick={() => setMobileDetailsOpen((v) => !v)}
                   aria-label={mobileDetailsOpen ? "Hide session details" : "Show session details"}
                   aria-expanded={mobileDetailsOpen}
@@ -492,7 +495,7 @@ export const SessionDetailPage: React.FC<{
         </div>
 
         {!loading && !error && session && mobileDetailsOpen && (
-          <div className={`${detailPanelClassName} mt-2 md:hidden`}>
+          <div className={`${detailPanelClassName} mt-2`}>
             <div className="flex items-center justify-end">
               <button
                 type="button"
@@ -573,8 +576,8 @@ export const SessionDetailPage: React.FC<{
                   hasSubtasks && mobilePane === "subtasks" ? "hidden md:flex" : "",
                 ].join(" ")}
               >
-                {/* Desktop metadata panel */}
-                <div className={`${detailPanelClassName} hidden md:flex`}>
+                {/* Desktop metadata panel now behind info toggle */}
+                <div className={`${detailPanelClassName} hidden`}>
                   <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
                     <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Title</span>
                     <span className="min-w-0 flex-1 break-words">
