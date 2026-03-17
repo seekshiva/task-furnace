@@ -1,7 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { getSessionCreatedAt, getSessionParentId, getSessionUpdatedAt } from "./types";
+import {
+  getSessionCreatedAt,
+  getSessionParentId,
+  getSessionUpdatedAt,
+  normalizeSessionStatus,
+  isActiveSessionStatus,
+} from "./types";
 import { formatDisplayDate } from "../date";
-import type { Session, SessionMessage } from "./types";
+import type {
+  Session,
+  SessionMessage,
+  SessionStatusMap,
+  SessionActivityMap,
+} from "./types";
 
 const shellBodyClassName =
   "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-[18px] text-[13px] leading-[1.55] shadow-[0_16px_40px_rgba(15,23,42,0.08)] max-md:px-[14px] max-md:py-[14px]";
@@ -17,6 +28,54 @@ const detailPanelClassName =
 const baseButtonClassName =
   "rounded-full border px-[14px] py-2 text-xs font-semibold transition disabled:cursor-default disabled:opacity-55 disabled:shadow-none";
 
+type ChildColumnKey = "active" | "ready" | "done";
+
+const childColumnDefinitions: Array<{
+  key: ChildColumnKey;
+  title: string;
+  emptyMessage: string;
+}> = [
+  { key: "active", title: "Active", emptyMessage: "No active sub-tasks." },
+  { key: "ready", title: "Ready", emptyMessage: "No ready sub-tasks." },
+  { key: "done", title: "Done", emptyMessage: "No completed sub-tasks." },
+];
+
+function getRawSessionStatusValue(
+  session: Session,
+  statusEntry: SessionStatusMap[string] | undefined,
+): string | null {
+  return statusEntry?.type ?? statusEntry?.state ?? statusEntry?.status ?? session.status ?? null;
+}
+
+function getChildColumnKey(
+  session: Session,
+  statusEntry: SessionStatusMap[string] | undefined,
+  activityEntry: SessionActivityMap[string] | undefined,
+): ChildColumnKey {
+  const rawStatus = getRawSessionStatusValue(session, statusEntry)?.trim().toLowerCase() ?? null;
+
+  if (
+    rawStatus === "done" ||
+    rawStatus === "complete" ||
+    rawStatus === "completed" ||
+    rawStatus === "closed"
+  ) {
+    return "done";
+  }
+
+  const isActiveFromActivity = activityEntry?.state === "active";
+  const normalized = normalizeSessionStatus(session, statusEntry);
+  return isActiveFromActivity || isActiveSessionStatus(normalized) ? "active" : "ready";
+}
+
+function getChronologicalTimestamp(session: Session): number {
+  const createdAt = getSessionCreatedAt(session);
+  if (!createdAt) return Number.POSITIVE_INFINITY;
+  const date = new Date(createdAt);
+  const ms = date.getTime();
+  return Number.isNaN(ms) ? Number.POSITIVE_INFINITY : ms;
+}
+
 export const SessionDetailPage: React.FC<{
   sessionId: string;
   navigate: (path: string) => void;
@@ -31,9 +90,12 @@ export const SessionDetailPage: React.FC<{
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [sseSupported, setSseSupported] = useState<boolean | null>(null);
-  const [relatedSessions, setRelatedSessions] = useState<Session[] | null>(null);
-  const [relatedSessionsError, setRelatedSessionsError] = useState<string | null>(null);
-  const [loadingRelatedSessions, setLoadingRelatedSessions] = useState(false);
+  const [allSessions, setAllSessions] = useState<Session[] | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<SessionStatusMap>({});
+  const [activity, setActivity] = useState<SessionActivityMap>({});
+  const [subtasksError, setSubtasksError] = useState<string | null>(null);
+  const [loadingSubtasks, setLoadingSubtasks] = useState(false);
+  const [mobilePane, setMobilePane] = useState<"thread" | "subtasks">("thread");
   const messageListRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -73,105 +135,97 @@ export const SessionDetailPage: React.FC<{
   useEffect(() => {
     let cancelled = false;
 
-    async function loadRelatedSessions(currentSession: Session | null) {
-      if (!currentSession) {
-        setRelatedSessions(null);
-        setRelatedSessionsError(null);
-        return;
-      }
+    async function loadSubtasks() {
+      if (!sessionId) return;
 
       try {
-        setLoadingRelatedSessions(true);
-        setRelatedSessionsError(null);
+        setLoadingSubtasks(true);
+        setSubtasksError(null);
 
-        const res = await fetch("/api/sessions");
-        if (!res.ok) {
-          throw new Error(`Request failed with status ${res.status}`);
+        const [sessionsRes, statusRes, activityRes] = await Promise.all([
+          fetch("/api/sessions"),
+          fetch("/api/sessions/status"),
+          fetch("/api/sessions/activity"),
+        ]);
+
+        if (!sessionsRes.ok) {
+          throw new Error(`Subtasks request failed with status ${sessionsRes.status}`);
         }
 
-        const body = (await res.json()) as { sessions?: Session[] };
+        const sessionsBody = (await sessionsRes.json()) as { sessions?: Session[] };
+        const nextSessions = sessionsBody.sessions ?? [];
+
+        let nextStatus: SessionStatusMap = {};
+        if (statusRes.ok) {
+          const statusBody = (await statusRes.json()) as { status?: SessionStatusMap };
+          nextStatus = statusBody.status ?? {};
+        }
+
+        let nextActivity: SessionActivityMap = {};
+        if (activityRes.ok) {
+          const activityBody = (await activityRes.json()) as { activity?: SessionActivityMap };
+          nextActivity = activityBody.activity ?? {};
+        }
+
         if (cancelled) return;
-
-        const all = body.sessions ?? [];
-        const byId = new Map<string, Session>();
-        for (const s of all) {
-          byId.set(s.id, s);
-        }
-
-        const childrenById = new Map<string, Session[]>();
-        for (const s of all) {
-          const parentId = getSessionParentId(s);
-          if (!parentId) continue;
-          const list = childrenById.get(parentId) ?? [];
-          list.push(s);
-          childrenById.set(parentId, list);
-        }
-
-        // Find the actual root by walking parent links.
-        let root: Session = currentSession;
-        const seen = new Set<string>();
-        while (true) {
-          if (seen.has(root.id)) break;
-          seen.add(root.id);
-          const parentId = getSessionParentId(root);
-          if (!parentId) break;
-          const parent = byId.get(parentId);
-          if (!parent) break;
-          root = parent;
-        }
-
-        // Collect the entire descendant set from the root.
-        const out: Session[] = [];
-        const stack: Session[] = [root];
-        const seenTree = new Set<string>();
-
-        while (stack.length > 0) {
-          const current = stack.pop();
-          if (!current) continue;
-          if (seenTree.has(current.id)) continue;
-          seenTree.add(current.id);
-          out.push(current);
-          const kids = childrenById.get(current.id) ?? [];
-          for (const child of kids) {
-            stack.push(child);
-          }
-        }
-
-        const inTree = out.sort((left, right) => {
-          const leftCreated = getSessionCreatedAt(left);
-          const rightCreated = getSessionCreatedAt(right);
-          const leftTs = leftCreated ? new Date(leftCreated).getTime() : Number.POSITIVE_INFINITY;
-          const rightTs = rightCreated ? new Date(rightCreated).getTime() : Number.POSITIVE_INFINITY;
-          return leftTs - rightTs;
-        });
-
-        setRelatedSessions(inTree);
+        setAllSessions(nextSessions);
+        setSessionStatus(nextStatus);
+        setActivity(nextActivity);
       } catch (err) {
         if (!cancelled) {
-          setRelatedSessionsError(
-            (err as Error).message ?? "Failed to load related sessions for this tree",
-          );
-          setRelatedSessions(null);
+          setSubtasksError((err as Error).message ?? "Failed to load sub-task sessions");
+          setAllSessions(null);
+          setSessionStatus({});
+          setActivity({});
         }
       } finally {
         if (!cancelled) {
-          setLoadingRelatedSessions(false);
+          setLoadingSubtasks(false);
         }
       }
     }
 
-    void loadRelatedSessions(session);
+    void loadSubtasks();
+
+    const interval = window.setInterval(() => {
+      void loadSubtasks();
+    }, 5000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [session]);
+  }, [sessionId]);
 
-  const rootSessionId = useMemo(() => {
-    if (!relatedSessions || relatedSessions.length === 0) return null;
-    const first = relatedSessions[0];
-    return first ? first.id : null;
-  }, [relatedSessions]);
+  const directChildren = useMemo(() => {
+    if (!allSessions || !sessionId) return [];
+    return allSessions
+      .filter((s) => getSessionParentId(s) === sessionId)
+      .sort((l, r) => getChronologicalTimestamp(l) - getChronologicalTimestamp(r));
+  }, [allSessions, sessionId]);
+
+  const childColumns = useMemo(() => {
+    const columns: Record<ChildColumnKey, Session[]> = {
+      active: [],
+      ready: [],
+      done: [],
+    };
+
+    for (const child of directChildren) {
+      const key = getChildColumnKey(child, sessionStatus[child.id], activity[child.id]);
+      columns[key].push(child);
+    }
+
+    for (const key of Object.keys(columns) as ChildColumnKey[]) {
+      columns[key].sort((l, r) => getChronologicalTimestamp(l) - getChronologicalTimestamp(r));
+    }
+
+    return columns;
+  }, [activity, directChildren, sessionStatus]);
+
+  const readyChildCount = childColumns.ready.length;
+  const activeChildCount = childColumns.active.length;
+  const doneChildCount = childColumns.done.length;
 
   async function reloadMessages(currentSessionId: string, opts?: { background?: boolean }) {
     const listEl = messageListRef.current;
@@ -322,6 +376,7 @@ export const SessionDetailPage: React.FC<{
 
   const createdAt = session ? getSessionCreatedAt(session) : null;
   const updatedAt = session ? getSessionUpdatedAt(session) : null;
+  const hasSubtasks = directChildren.length > 0;
 
   return (
     <section className="flex min-h-0 w-full flex-1 flex-col">
@@ -350,7 +405,46 @@ export const SessionDetailPage: React.FC<{
 
         {!loading && !error && session && (
           <>
-            <div className={`${detailPanelClassName} mt-1`}>
+            {hasSubtasks && (
+              <div className="mt-1 flex w-full items-center justify-between gap-2 rounded-[18px] border border-slate-200 bg-white px-3 py-2 md:hidden">
+                <div className="text-[12px] font-semibold text-slate-600">View</div>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    className={[
+                      "rounded-full px-3 py-1 text-[12px] font-semibold transition",
+                      mobilePane === "thread"
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                    ].join(" ")}
+                    onClick={() => setMobilePane("thread")}
+                  >
+                    Thread
+                  </button>
+                  <button
+                    type="button"
+                    className={[
+                      "rounded-full px-3 py-1 text-[12px] font-semibold transition",
+                      mobilePane === "subtasks"
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                    ].join(" ")}
+                    onClick={() => setMobilePane("subtasks")}
+                  >
+                    Sub-tasks ({directChildren.length})
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-2 flex min-h-0 flex-1 flex-col gap-3 md:flex-row">
+              <div
+                className={[
+                  "flex min-h-0 flex-1 flex-col gap-2.5",
+                  hasSubtasks && mobilePane === "subtasks" ? "hidden md:flex" : "",
+                ].join(" ")}
+              >
+                <div className={detailPanelClassName}>
               <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
                 <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Title</span>
                 <span className="min-w-0 flex-1 break-words">
@@ -405,88 +499,18 @@ export const SessionDetailPage: React.FC<{
                   </span>
                 </div>
               )}
-              {relatedSessions && relatedSessions.length > 0 && (
-                <div className="mt-1 flex flex-col gap-1.5">
-                  <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                    <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
-                      Sub-agent tree
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1 text-[12px] text-slate-500">
-                        {relatedSessions.length} sessions in this tree, oldest first.
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        {relatedSessions.map((s) => {
-                          const created = getSessionCreatedAt(s);
-                          const createdLabel = created ? formatDisplayDate(created) : null;
-                          const isRoot = rootSessionId ? s.id === rootSessionId : !getSessionParentId(s);
-                          const isCurrent = s.id === session.id;
-
-                          return (
-                            <button
-                              key={s.id}
-                              type="button"
-                              className={[
-                                "flex items-center justify-between gap-2 rounded-[12px] border px-2.5 py-1.5 text-left text-[12px] transition",
-                                isCurrent
-                                  ? "border-blue-300 bg-blue-50 text-slate-900"
-                                  : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50/60",
-                              ].join(" ")}
-                              onClick={() => {
-                                if (s.id !== session.id) {
-                                  navigate(`/sessions/${s.id}`);
-                                }
-                              }}
-                            >
-                              <div className="flex min-w-0 flex-col">
-                                <div className="flex items-center gap-1">
-                                  {isRoot && (
-                                    <span className="inline-flex items-center rounded-full bg-slate-900 px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-[0.08em] text-white">
-                                      Root
-                                    </span>
-                                  )}
-                                  <span className="truncate font-medium">
-                                    {s.title || s.id.slice(0, 8)}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                                  {createdLabel && <span>{createdLabel}</span>}
-                                  {!createdLabel && <span>Created time unknown</span>}
-                                  {s.id === session.id && (
-                                    <span className="rounded-full bg-blue-100 px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-[0.08em] text-blue-700">
-                                      Viewing
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <span className="shrink-0 text-slate-400 text-[14px]">›</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {loadingRelatedSessions && (
+              {hasSubtasks && (
                 <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto" />
-                  <span className="min-w-0 flex-1 text-[12px] text-slate-500">
-                    Loading sub-agent tree…
+                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Sub-tasks</span>
+                  <span className="min-w-0 flex-1 text-[12px] text-slate-600">
+                    {directChildren.length} direct children · {readyChildCount} ready ·{" "}
+                    {activeChildCount} active · {doneChildCount} done
                   </span>
                 </div>
               )}
-              {relatedSessionsError && !loadingRelatedSessions && (
-                <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                  <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto" />
-                  <span className="min-w-0 flex-1 text-[12px] text-amber-700">
-                    {relatedSessionsError}
-                  </span>
                 </div>
-              )}
-            </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+                <div className="flex min-h-0 flex-1 flex-col gap-2.5">
               {loadingMessages && (
                 <div className={mutedTextClassName}>Loading messages…</div>
               )}
@@ -642,6 +666,106 @@ export const SessionDetailPage: React.FC<{
                   >
                     {submitting ? "Continuing…" : "Continue session"}
                   </button>
+                </div>
+              </div>
+            </div>
+              </div>
+
+              <div
+                className={[
+                  "min-h-0 flex-1",
+                  hasSubtasks && mobilePane === "thread" ? "hidden md:block" : "",
+                ].join(" ")}
+              >
+                <div className="flex min-h-0 flex-1 flex-col rounded-[18px] border border-slate-200 bg-slate-50 p-[14px]">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="text-sm font-bold text-slate-900">Sub-task board</div>
+                    <div className="text-[11px] text-slate-500">
+                      {directChildren.length > 0
+                        ? `${directChildren.length} sub-tasks`
+                        : "No sub-tasks"}
+                    </div>
+                  </div>
+
+                  {loadingSubtasks && (
+                    <div className={mutedTextClassName}>Loading sub-tasks…</div>
+                  )}
+                  {subtasksError && !loadingSubtasks && (
+                    <div className="rounded-[14px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+                      {subtasksError}
+                    </div>
+                  )}
+
+                  {!loadingSubtasks && !subtasksError && directChildren.length === 0 && (
+                    <div className="flex min-h-[120px] flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-400">
+                      No sub-tasks for this session.
+                    </div>
+                  )}
+
+                  {!loadingSubtasks && !subtasksError && directChildren.length > 0 && (
+                    <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden">
+                      {childColumnDefinitions.map((column) => {
+                        const sessionsForColumn = childColumns[column.key];
+
+                        return (
+                          <div
+                            key={column.key}
+                            className="flex min-h-[240px] min-w-[260px] shrink-0 flex-col rounded-[16px] border border-slate-200 bg-white p-3 md:min-w-[280px]"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-bold text-slate-900">
+                                {column.title}
+                              </span>
+                              <span className="min-w-7 rounded-full border border-slate-200 bg-slate-50 px-[9px] py-[3px] text-center text-xs text-slate-500">
+                                {sessionsForColumn.length}
+                              </span>
+                            </div>
+                            <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+                              {sessionsForColumn.length === 0 && (
+                                <div className="flex min-h-[96px] flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 bg-slate-50 p-[14px] text-[13px] text-slate-400">
+                                  {column.emptyMessage}
+                                </div>
+                              )}
+                              {sessionsForColumn.map((child) => {
+                                const normalized = normalizeSessionStatus(
+                                  child,
+                                  sessionStatus[child.id],
+                                );
+                                const statusLabel = normalized.label ?? normalized.type;
+                                const createdLabel = formatDisplayDate(getSessionCreatedAt(child));
+
+                                return (
+                                  <button
+                                    key={child.id}
+                                    type="button"
+                                    className="flex w-full shrink-0 cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left text-inherit shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:-translate-y-px hover:border-blue-200 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)]"
+                                    onClick={() => navigate(`/sessions/${child.id}`)}
+                                  >
+                                    <div className="flex min-w-0 flex-col gap-1">
+                                      <div className="text-sm font-semibold text-slate-900">
+                                        {child.title || child.id.slice(0, 8)}
+                                      </div>
+                                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                          {statusLabel}
+                                        </span>
+                                      </div>
+                                      {createdLabel && (
+                                        <div className="text-xs text-slate-500">
+                                          Created {createdLabel}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="shrink-0 text-lg text-slate-400">›</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
