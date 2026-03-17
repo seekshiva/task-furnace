@@ -5,7 +5,7 @@ import {
   normalizeSessionStatus,
   isActiveSessionStatus,
 } from "./types";
-import { formatDisplayDate } from "../date";
+import { formatDisplayDate, formatDisplayTimestamp } from "../date";
 import type { Session, SessionStatusMap, SessionActivityMap } from "./types";
 
 const shellBodyClassName =
@@ -226,7 +226,7 @@ const SessionCard: React.FC<{
 }) => {
   const normalized = normalizeSessionStatus(session, statusEntry);
   const statusLabel = normalized.label ?? normalized.type;
-  const createdLabel = formatDisplayDate(getSessionCreatedAt(session));
+  const createdLabel = formatDisplayTimestamp(getSessionCreatedAt(session));
 
   const totalInTree = Math.max(subtreeSize, 1);
   const completedRatio =
@@ -294,7 +294,7 @@ const SessionCard: React.FC<{
           </div>
           <div className="flex flex-col gap-1">
             {subSessions.map((sub) => {
-              const createdAt = formatDisplayDate(getSessionCreatedAt(sub));
+              const createdAt = formatDisplayTimestamp(getSessionCreatedAt(sub));
               const subStatus = getSessionStatusLabel(sub);
               return (
                 <button

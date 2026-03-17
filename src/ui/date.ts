@@ -52,5 +52,5 @@ export function formatDisplayTimestamp(value?: string | number | Date | null): s
     return dateLabel;
   }
 
-  return `${dateLabel} - ${hour}:${minute}${dayPeriod.toLowerCase()}`;
+  return `${dateLabel} . ${hour}:${minute}${dayPeriod.toLowerCase()}`;
 }

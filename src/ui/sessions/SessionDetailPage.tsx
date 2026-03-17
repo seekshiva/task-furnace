@@ -869,7 +869,9 @@ export const SessionDetailPage: React.FC<{
                                   sessionStatus[child.id],
                                 );
                                 const statusLabel = normalized.label ?? normalized.type;
-                                const createdLabel = formatDisplayDate(getSessionCreatedAt(child));
+                                const createdLabel = formatDisplayTimestamp(
+                                  getSessionCreatedAt(child),
+                                );
                                 const directAgents = directChildrenByParentId.get(child.id) ?? [];
                                 const hasDirectAgents = directAgents.length > 0;
                                 const isExpanded = expandedSubAgentLists[child.id] ?? false;
@@ -937,7 +939,7 @@ export const SessionDetailPage: React.FC<{
                                         </div>
                                         <div className="flex flex-col gap-1">
                                           {directAgents.map((agent) => {
-                                            const agentCreatedAt = formatDisplayDate(
+                                            const agentCreatedAt = formatDisplayTimestamp(
                                               getSessionCreatedAt(agent),
                                             );
                                             const agentNormalized = normalizeSessionStatus(
