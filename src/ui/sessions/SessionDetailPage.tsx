@@ -100,6 +100,7 @@ function ToolPartCard({ part }: { part: Extract<SessionMessagePart, { type: "too
     null;
 
   const isBash = toolName === "bash" || toolName === "shell";
+  const headerToolLabel = isBash ? "shell" : toolName;
   const bashCommand = isBash ? getBashCommand(input) : null;
   const output =
     status === "completed" && typeof (state as any)?.output === "string" ? ((state as any).output as string) : null;
@@ -111,17 +112,16 @@ function ToolPartCard({ part }: { part: Extract<SessionMessagePart, { type: "too
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold tracking-[0.04em] text-slate-600">
-              {isBash ? "Shell" : toolName}
-              {isBash && title ? `: ${String(title)}` : ""}
-            </span>
+            <div className="min-w-0 flex-1 text-[11px] font-semibold tracking-[0.04em] text-slate-600">
+              <span className="whitespace-nowrap">{headerToolLabel}</span>
+              {title && (
+                <span className="ml-2 min-w-0 break-words font-normal text-slate-500">
+                  {String(title)}
+                </span>
+              )}
+            </div>
             <ToolStatusBadge status={String(status)} />
           </div>
-          {!isBash && title && (
-            <div className="mt-1 min-w-0 break-words text-[12px] text-slate-500">
-              {String(title)}
-            </div>
-          )}
         </div>
       </div>
 
