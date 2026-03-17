@@ -101,6 +101,7 @@ export const SessionDetailPage: React.FC<{
     {},
   );
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const subtaskBoardScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,12 +140,21 @@ export const SessionDetailPage: React.FC<{
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSubtasks() {
+    async function loadSubtasks(opts?: { background?: boolean }) {
       if (!sessionId) return;
 
+      const isBackground = opts?.background === true;
+      const boardEl = subtaskBoardScrollRef.current;
+      const prevScrollLeft = boardEl?.scrollLeft ?? 0;
+
       try {
-        setLoadingSubtasks(true);
-        setSubtasksError(null);
+        if (!isBackground) {
+          setLoadingSubtasks(true);
+        }
+        // Don't clear the existing board state during background refresh.
+        if (!isBackground) {
+          setSubtasksError(null);
+        }
 
         const [sessionsRes, statusRes, activityRes] = await Promise.all([
           fetch("/api/sessions"),
@@ -175,16 +185,24 @@ export const SessionDetailPage: React.FC<{
         setAllSessions(nextSessions);
         setSessionStatus(nextStatus);
         setActivity(nextActivity);
+
+        if (boardEl) {
+          window.requestAnimationFrame(() => {
+            if (!subtaskBoardScrollRef.current) return;
+            subtaskBoardScrollRef.current.scrollLeft = prevScrollLeft;
+          });
+        }
       } catch (err) {
         if (!cancelled) {
           setSubtasksError((err as Error).message ?? "Failed to load sub-task sessions");
-          setAllSessions(null);
-          setSessionStatus({});
-          setActivity({});
+          // Keep the previous sub-task board state to avoid flicker/jumps when
+          // polling fails transiently.
         }
       } finally {
         if (!cancelled) {
-          setLoadingSubtasks(false);
+          if (!isBackground) {
+            setLoadingSubtasks(false);
+          }
         }
       }
     }
@@ -192,7 +210,7 @@ export const SessionDetailPage: React.FC<{
     void loadSubtasks();
 
     const interval = window.setInterval(() => {
-      void loadSubtasks();
+      void loadSubtasks({ background: true });
     }, 5000);
 
     return () => {
@@ -816,7 +834,10 @@ export const SessionDetailPage: React.FC<{
                   )}
 
                   {!loadingSubtasks && !subtasksError && directChildren.length > 0 && (
-                    <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden">
+                    <div
+                      ref={subtaskBoardScrollRef}
+                      className="flex min-h-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden"
+                    >
                       {childColumnDefinitions.map((column) => {
                         const sessionsForColumn = childColumns[column.key];
 
