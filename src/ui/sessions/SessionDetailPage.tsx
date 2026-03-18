@@ -111,6 +111,10 @@ function ToolPartCard({
   const state = part.state as SessionToolState | undefined;
   const status = (state as any)?.status ?? "pending";
   const input = getToolInput(state);
+  const [isShellOutputOpen, setIsShellOutputOpen] = useState<boolean>(() => {
+    // For shell-like tools, errors should be immediately visible.
+    return status === "error";
+  });
   const title =
     (state as any)?.title ??
     (input.filePath as string | undefined) ??
@@ -119,41 +123,136 @@ function ToolPartCard({
     null;
 
   const isBash = toolName === "bash" || toolName === "shell";
+  const normalizedToolName = toolName.toLowerCase();
+  const isReadWrite =
+    normalizedToolName === "read" ||
+    normalizedToolName === "write" ||
+    normalizedToolName === "file_read" ||
+    normalizedToolName === "file_write" ||
+    normalizedToolName === "read_file" ||
+    normalizedToolName === "write_file";
   const headerToolLabel = isBash ? "shell" : toolName;
   const bashCommand = isBash ? getBashCommand(input) : null;
   const output =
     status === "completed" && typeof (state as any)?.output === "string" ? ((state as any).output as string) : null;
   const error =
     status === "error" && typeof (state as any)?.error === "string" ? ((state as any).error as string) : null;
+  const [isReadWriteOpen, setIsReadWriteOpen] = useState<boolean>(() => status === "error");
+
+  useEffect(() => {
+    if (isBash && error) {
+      setIsShellOutputOpen(true);
+    }
+  }, [isBash, error]);
+
+  useEffect(() => {
+    if (isReadWrite && error) {
+      setIsReadWriteOpen(true);
+    }
+  }, [isReadWrite, error]);
 
   const taskSessionId = output ? extractTaskSessionId(output) : null;
   const taskSession = taskSessionId ? sessionsById.get(taskSessionId) ?? null : null;
+  const isReadWriteCollapsed = isReadWrite && !isReadWriteOpen;
 
   const toolCard = (
     <div className="rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1 text-[11px] font-semibold tracking-[0.04em] text-slate-600">
-              <span className="whitespace-nowrap">{headerToolLabel}</span>
-              {title && (
-                <span className="ml-2 min-w-0 break-words font-normal text-slate-500">{String(title)}</span>
-              )}
+      {!isReadWriteCollapsed && (
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1 text-[11px] font-semibold tracking-[0.04em] text-slate-600">
+                <span className="whitespace-nowrap">{headerToolLabel}</span>
+                {title && (
+                  <span className="ml-2 min-w-0 break-words font-normal text-slate-500">{String(title)}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <ToolStatusBadge status={String(status)} />
+                {isReadWrite && (
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-50"
+                    onClick={() => setIsReadWriteOpen(false)}
+                  >
+                    Collapse
+                  </button>
+                )}
+              </div>
             </div>
-            <ToolStatusBadge status={String(status)} />
           </div>
-        </div>
-      </div>
-
-      {isBash && bashCommand && (
-        <div className="mt-2 overflow-hidden rounded-[12px] border border-slate-200 bg-slate-950 text-slate-100">
-          <pre className="overflow-x-auto px-3 py-2 text-[12px] leading-[1.55]">
-            <code className="before:select-none before:text-emerald-400 before:content-['$_']">{bashCommand}</code>
-          </pre>
         </div>
       )}
 
-      {!isBash && Object.keys(input).length > 0 && (
+      {isReadWriteCollapsed && (
+        <div
+          className={[
+            "flex w-full items-center justify-between gap-3 text-left text-[12px] leading-[1.55]",
+            "overflow-hidden whitespace-nowrap",
+            "text-slate-800 hover:text-slate-950",
+          ].join(" ")}
+          role="button"
+          tabIndex={0}
+          aria-expanded={false}
+          onClick={() => setIsReadWriteOpen(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setIsReadWriteOpen(true);
+            }
+          }}
+        >
+          <span className="min-w-0 flex-1 truncate">
+            <span className="font-semibold text-slate-600">{headerToolLabel}</span>
+            {title && <span className="ml-2 text-slate-500">{String(title)}</span>}
+          </span>
+          <span className="shrink-0">
+            <span className="flex items-center gap-2">
+              <ToolStatusBadge status={String(status)} />
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-50"
+                onClick={() => setIsReadWriteOpen(true)}
+              >
+                Expand
+              </button>
+            </span>
+          </span>
+        </div>
+      )}
+
+      {isBash && bashCommand && (
+        <div className="mt-2 overflow-hidden rounded-[12px] border border-slate-200 bg-slate-950 text-slate-100">
+          <div className="flex items-start justify-between gap-3 px-3 py-2">
+            <pre className="min-w-0 flex-1 overflow-x-auto text-[12px] leading-[1.55]">
+              <code className="before:select-none before:text-emerald-400 before:content-['$_']">{bashCommand}</code>
+            </pre>
+            {(output || error) && (
+              <button
+                type="button"
+                className="shrink-0 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-800"
+                aria-expanded={isShellOutputOpen}
+                onClick={() => setIsShellOutputOpen((v) => !v)}
+              >
+                {isShellOutputOpen ? (error ? "Hide error" : "Hide output") : error ? "View error" : "View output"}
+              </button>
+            )}
+          </div>
+          {(output || error) && isShellOutputOpen && (
+            <pre
+              className={[
+                "border-t px-3 py-2 text-[12px] leading-[1.55]",
+                "max-h-[280px] overflow-auto whitespace-pre-wrap break-words font-mono",
+                error ? "border-rose-500/30 bg-rose-950/30 text-rose-100" : "border-slate-800 text-slate-100",
+              ].join(" ")}
+            >
+              <code>{error ?? output}</code>
+            </pre>
+          )}
+        </div>
+      )}
+
+      {!isBash && !isReadWrite && Object.keys(input).length > 0 && (
         <details className="mt-2">
           <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500">
             input
@@ -164,7 +263,18 @@ function ToolPartCard({
         </details>
       )}
 
-      {(output || error) && (
+      {!isBash && isReadWrite && isReadWriteOpen && Object.keys(input).length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500">
+            input
+          </summary>
+          <pre className="mt-2 max-h-[220px] overflow-auto rounded-[12px] border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] leading-[1.55] text-slate-800">
+            <code>{safeStringify(input)}</code>
+          </pre>
+        </details>
+      )}
+
+      {(output || error) && !isBash && (!isReadWrite || isReadWriteOpen) && (
         <details className="mt-2" open={Boolean(error)}>
           <summary
             className={[
