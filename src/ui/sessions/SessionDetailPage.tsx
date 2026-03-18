@@ -892,15 +892,16 @@ export const SessionDetailPage: React.FC<{
                                   }
 
                                   if (isReasoningPart(part)) {
-                                    const snippet =
-                                      part.text.length > 120 ? `${part.text.slice(0, 120)}…` : part.text;
                                     return (
                                       <details
                                         key={index}
                                         className="rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-[12px] text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                                       >
-                                        <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500">
-                                          reasoning <span className="font-normal">· {snippet}</span>
+                                        <summary className="cursor-pointer select-none pl-3 text-[11px] font-semibold tracking-[0.04em] text-slate-500">
+                                          <span className="inline-flex items-center gap-1.5">
+                                            <span aria-hidden="true">🧠</span>
+                                            <span>reasoning</span>
+                                          </span>
                                         </summary>
                                         <div className="mt-2 whitespace-pre-wrap leading-[1.55] text-slate-800">
                                           {part.text}
