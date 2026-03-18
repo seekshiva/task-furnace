@@ -7,6 +7,7 @@ import {
 } from "./types";
 import { formatDisplayDate, formatDisplayTimestamp } from "../date";
 import type { Session, SessionStatusMap, SessionActivityMap } from "./types";
+import { SessionCardHeader } from "./SessionCardHeader";
 
 const shellBodyClassName =
   "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto text-[13px] leading-[1.55]";
@@ -236,56 +237,46 @@ const SessionCard: React.FC<{
 
   return (
     <div className="flex w-full flex-col gap-2">
-      <button
-        type="button"
-        className={sessionRowClassName}
+      <SessionCardHeader
+        session={session}
+        statusLabel={statusLabel}
+        createdLabel={createdLabel ?? null}
         onClick={() => navigate(`/sessions/${session.id}`)}
-      >
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="text-sm font-semibold text-slate-900">
-            {session.title || session.id.slice(0, 8)}
+        buttonClassName={sessionRowClassName}
+        extraBadges={
+          hasSubtree ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 transition hover:bg-slate-200"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleTree();
+              }}
+              aria-expanded={hasSubtree ? isTreeExpanded : undefined}
+              aria-label={isTreeExpanded ? "Hide sub-agent sessions" : "Show sub-agent sessions"}
+            >
+              <span>{directAgentCount} sub-agents</span>
+              <span className="text-[12px] text-slate-500">{isTreeExpanded ? "▾" : "▸"}</span>
+            </button>
+          ) : null
+        }
+      />
+
+      {hasSubtree && (
+        <div className="mt-1 flex items-center gap-2">
+          <div className="relative h-[6px] w-24 overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-blue-500 transition-[width] duration-150"
+              style={{ width: `${completedPercent}%` }}
+            />
           </div>
-          <div className="flex flex-wrap gap-2 text-xs text-slate-500 items-center">
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-              {statusLabel}
-            </span>
-            {hasSubtree && (
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 transition hover:bg-slate-200"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggleTree();
-                }}
-                aria-expanded={hasSubtree ? isTreeExpanded : undefined}
-                aria-label={
-                  isTreeExpanded ? "Hide sub-agent sessions" : "Show sub-agent sessions"
-                }
-              >
-                <span>{directAgentCount} sub-agents</span>
-                <span className="text-[12px] text-slate-500">{isTreeExpanded ? "▾" : "▸"}</span>
-              </button>
-            )}
-          </div>
-          {hasSubtree && (
-            <div className="mt-1 flex items-center gap-2">
-              <div className="relative h-[6px] w-24 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-[width] duration-150"
-                  style={{ width: `${completedPercent}%` }}
-                />
-              </div>
-              <span className="text-[11px] text-slate-500">
-                {readyChildrenCount}/{totalChildrenCount} ready
-                {activeCount > 0 ? ` · ${activeCount} active` : ""}
-              </span>
-            </div>
-          )}
-          {createdLabel && <div className="text-xs text-slate-500">Created {createdLabel}</div>}
+          <span className="text-[11px] text-slate-500">
+            {readyChildrenCount}/{totalChildrenCount} ready
+            {activeCount > 0 ? ` · ${activeCount} active` : ""}
+          </span>
         </div>
-        <div className="shrink-0 text-lg text-slate-400">›</div>
-      </button>
+      )}
 
       {hasSubtree && isTreeExpanded && subSessions.length > 0 && (
         <div className="ml-2.5 flex flex-col gap-1 rounded-[14px] border border-slate-200 bg-white px-2.5 py-2">

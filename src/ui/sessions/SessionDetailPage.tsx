@@ -13,6 +13,7 @@ import {
 } from "./types";
 import { formatDisplayDate, formatDisplayTimestamp } from "../date";
 import { Markdown } from "../Markdown";
+import { SessionCardHeader } from "./SessionCardHeader";
 import type {
   Session,
   SessionMessage,
@@ -1043,28 +1044,13 @@ export const SessionDetailPage: React.FC<{
                                     key={child.id}
                                     className="flex w-full shrink-0 flex-col gap-2 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                                   >
-                                    <button
-                                      type="button"
-                                      className="flex w-full items-start justify-between gap-3 text-left text-inherit"
+                                    <SessionCardHeader
+                                      session={child}
+                                      statusLabel={statusLabel}
+                                      createdLabel={createdLabel ?? null}
                                       onClick={() => navigate(`/sessions/${child.id}`)}
-                                    >
-                                      <div className="flex min-w-0 flex-col gap-1">
-                                        <div className="text-sm font-semibold text-slate-900">
-                                          {child.title || child.id.slice(0, 8)}
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                                            {statusLabel}
-                                          </span>
-                                        </div>
-                                        {createdLabel && (
-                                          <div className="text-xs text-slate-500">
-                                            Created {createdLabel}
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div className="shrink-0 text-lg text-slate-400">›</div>
-                                    </button>
+                                      buttonClassName="flex w-full items-start justify-between gap-3 text-left text-inherit"
+                                    />
 
                                     {hasDirectAgents && (
                                       <div className="flex items-center justify-between gap-2">
