@@ -984,6 +984,10 @@ export const SessionDetailPage: React.FC<{
                                     return null;
                                   }
 
+                                  if ((part as any)?.type === "patch") {
+                                    return null;
+                                  }
+
                                   const baseType =
                                     typeof (part as any)?.type === "string" ? ((part as any).type as string) : "meta";
                                   return (
