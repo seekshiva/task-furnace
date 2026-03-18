@@ -88,7 +88,25 @@ function ToolStatusBadge({ status }: { status: string }) {
   );
 }
 
-function ToolPartCard({ part }: { part: Extract<SessionMessagePart, { type: "tool" }> }) {
+function extractTaskSessionId(text: string): string | null {
+  // Example: "task_id: ses_309f19fb1ffewxUf60FWMRpYg5"
+  const match = text.match(/task_id\s*:\s*(ses_[A-Za-z0-9_-]+)/);
+  return match?.[1] ?? null;
+}
+
+function ToolPartCard({
+  part,
+  sessionsById,
+  sessionStatus,
+  activity,
+  navigate,
+}: {
+  part: Extract<SessionMessagePart, { type: "tool" }>;
+  sessionsById: Map<string, Session>;
+  sessionStatus: SessionStatusMap;
+  activity: SessionActivityMap;
+  navigate: (path: string) => void;
+}) {
   const toolName = typeof part.tool === "string" && part.tool.trim() ? part.tool : "tool";
   const state = part.state as SessionToolState | undefined;
   const status = (state as any)?.status ?? "pending";
@@ -108,7 +126,10 @@ function ToolPartCard({ part }: { part: Extract<SessionMessagePart, { type: "too
   const error =
     status === "error" && typeof (state as any)?.error === "string" ? ((state as any).error as string) : null;
 
-  return (
+  const taskSessionId = output ? extractTaskSessionId(output) : null;
+  const taskSession = taskSessionId ? sessionsById.get(taskSessionId) ?? null : null;
+
+  const toolCard = (
     <div className="rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
@@ -116,9 +137,7 @@ function ToolPartCard({ part }: { part: Extract<SessionMessagePart, { type: "too
             <div className="min-w-0 flex-1 text-[11px] font-semibold tracking-[0.04em] text-slate-600">
               <span className="whitespace-nowrap">{headerToolLabel}</span>
               {title && (
-                <span className="ml-2 min-w-0 break-words font-normal text-slate-500">
-                  {String(title)}
-                </span>
+                <span className="ml-2 min-w-0 break-words font-normal text-slate-500">{String(title)}</span>
               )}
             </div>
             <ToolStatusBadge status={String(status)} />
@@ -129,9 +148,7 @@ function ToolPartCard({ part }: { part: Extract<SessionMessagePart, { type: "too
       {isBash && bashCommand && (
         <div className="mt-2 overflow-hidden rounded-[12px] border border-slate-200 bg-slate-950 text-slate-100">
           <pre className="overflow-x-auto px-3 py-2 text-[12px] leading-[1.55]">
-            <code className="before:select-none before:text-emerald-400 before:content-['$_']">
-              {bashCommand}
-            </code>
+            <code className="before:select-none before:text-emerald-400 before:content-['$_']">{bashCommand}</code>
           </pre>
         </div>
       )}
@@ -169,6 +186,35 @@ function ToolPartCard({ part }: { part: Extract<SessionMessagePart, { type: "too
           </pre>
         </details>
       )}
+    </div>
+  );
+
+  if (!taskSession) {
+    return toolCard;
+  }
+
+  const normalized = normalizeSessionStatus(taskSession, sessionStatus[taskSession.id]);
+  const statusLabel = normalized.label ?? normalized.type;
+  const createdLabel = formatDisplayTimestamp(getSessionCreatedAt(taskSession));
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex w-full shrink-0 flex-col gap-2 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <SessionCardHeader
+          session={taskSession}
+          statusLabel={statusLabel}
+          createdLabel={createdLabel ?? null}
+          onClick={() => navigate(`/sessions/${taskSession.id}`)}
+          buttonClassName="flex w-full items-start justify-between gap-3 text-left text-inherit"
+        />
+      </div>
+
+      <details className="rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500">
+          task details
+        </summary>
+        <div className="mt-2">{toolCard}</div>
+      </details>
     </div>
   );
 }
@@ -388,6 +434,17 @@ export const SessionDetailPage: React.FC<{
     }
     for (const list of map.values()) {
       list.sort((l, r) => getChronologicalTimestamp(l) - getChronologicalTimestamp(r));
+    }
+    return map;
+  }, [allSessions]);
+
+  const sessionsById = useMemo(() => {
+    const map = new Map<string, Session>();
+    if (!allSessions) return map;
+    for (const s of allSessions) {
+      if (s?.id) {
+        map.set(s.id, s);
+      }
     }
     return map;
   }, [allSessions]);
@@ -888,7 +945,16 @@ export const SessionDetailPage: React.FC<{
                               <div className="mt-2 flex flex-col gap-2">
                                 {otherParts.map((part, index) => {
                                   if (isToolPart(part)) {
-                                    return <ToolPartCard key={index} part={part} />;
+                                    return (
+                                      <ToolPartCard
+                                        key={index}
+                                        part={part}
+                                        sessionsById={sessionsById}
+                                        sessionStatus={sessionStatus}
+                                        activity={activity}
+                                        navigate={navigate}
+                                      />
+                                    );
                                   }
 
                                   if (isReasoningPart(part)) {
