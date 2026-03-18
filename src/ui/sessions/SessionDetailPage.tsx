@@ -965,7 +965,6 @@ export const SessionDetailPage: React.FC<{
                                       >
                                         <summary className="cursor-pointer select-none pl-3 text-[11px] font-semibold tracking-[0.04em] text-slate-500">
                                           <span className="inline-flex items-center gap-1.5">
-                                            <span aria-hidden="true">🧠</span>
                                             <span>reasoning</span>
                                           </span>
                                         </summary>
