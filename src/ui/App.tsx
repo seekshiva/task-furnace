@@ -3,6 +3,7 @@ import { useRoute } from "./router";
 import { SessionsPage } from "./sessions/SessionsPage";
 import { SessionDetailPage } from "./sessions/SessionDetailPage";
 import { TowerPage } from "./tower/TowerPage";
+import { SettingsPage } from "./settings/SettingsPage";
 
 const appClassName =
   "flex h-full max-h-screen min-h-0 w-full flex-1 flex-col bg-[radial-gradient(circle_at_top_right,rgba(191,219,254,0.45),transparent_28%),linear-gradient(180deg,#fdfefe_0%,#f5f7fb_100%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(30,58,138,0.25),transparent_28%),linear-gradient(180deg,#0b1120_0%,#0f172a_100%)] px-[18px] pt-4 pb-[18px] max-md:px-[10px] max-md:pt-[14px] max-md:pb-4";
@@ -53,6 +54,13 @@ export const App: React.FC = () => {
           >
             Tower
           </button>
+          <button
+            type="button"
+            className={navButtonClass(route.type === "settings")}
+            onClick={() => navigate("/settings")}
+          >
+            Settings
+          </button>
         </nav>
       </header>
 
@@ -62,6 +70,7 @@ export const App: React.FC = () => {
           <SessionDetailPage sessionId={route.sessionId} navigate={navigate} />
         )}
         {route.type === "tower" && <TowerPage />}
+        {route.type === "settings" && <SettingsPage />}
       </main>
     </div>
   );

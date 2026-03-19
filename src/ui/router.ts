@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 export type Route =
   | { type: "sessions" }
   | { type: "session-detail"; sessionId: string }
-  | { type: "tower" };
+  | { type: "tower" }
+  | { type: "settings" };
 
 export function parseRoute(pathname: string): Route {
   if (pathname === "/sessions") {
@@ -12,6 +13,10 @@ export function parseRoute(pathname: string): Route {
 
   if (pathname === "/tower") {
     return { type: "tower" };
+  }
+
+  if (pathname === "/settings") {
+    return { type: "settings" };
   }
 
   if (pathname.startsWith("/sessions/")) {
