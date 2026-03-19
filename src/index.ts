@@ -121,6 +121,7 @@ const server = Bun.serve({
     "/sessions": indexHtml,
     "/sessions/:sessionId": indexHtml,
     "/tower": indexHtml,
+    "/settings": indexHtml,
     "/api/projects": {
       GET: async () => {
         try {
@@ -396,6 +397,51 @@ const server = Bun.serve({
             Connection: "keep-alive",
           },
         });
+      },
+    },
+    "/api/settings/version": {
+      GET: async () => {
+        try {
+          const { stdout: hashOut } = await $`git rev-parse HEAD`.quiet();
+          const hash = hashOut.toString().trim();
+
+          const { stdout: dateOut } =
+            await $`git log -1 --format=%aI ${hash}`.quiet();
+          const commitDate = dateOut.toString().trim();
+
+          return Response.json({ hash, date: commitDate });
+        } catch (error) {
+          console.error("Failed to get current version info", error);
+          return new Response(
+            JSON.stringify({ error: "Failed to get version info" }),
+            { status: 500 },
+          );
+        }
+      },
+    },
+    "/api/settings/update": {
+      POST: async () => {
+        try {
+          const result = await $`git pull origin main`.quiet();
+          const output = result.stdout.toString().trim();
+          const alreadyUpToDate = output.includes("Already up to date");
+
+          return Response.json({
+            success: true,
+            alreadyUpToDate,
+            output,
+          });
+        } catch (error) {
+          const stderr =
+            error && typeof error === "object" && "stderr" in error
+              ? (error as { stderr: { toString(): string } }).stderr.toString().trim()
+              : String(error);
+          console.error("git pull origin main failed", stderr);
+          return Response.json(
+            { success: false, error: stderr },
+            { status: 500 },
+          );
+        }
       },
     },
     "/api/tower/commits": {
