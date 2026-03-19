@@ -24,15 +24,15 @@ import type {
 } from "./types";
 
 const shellBodyClassName =
-  "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-[18px] text-[13px] leading-[1.55] shadow-[0_16px_40px_rgba(15,23,42,0.08)] max-md:px-[14px] max-md:py-[14px]";
+  "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-[20px] border border-slate-200 dark:border-slate-700 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] dark:bg-[linear-gradient(180deg,#0f172a_0%,#1e293b_100%)] p-[18px] text-[13px] leading-[1.55] shadow-[0_16px_40px_rgba(15,23,42,0.08)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.3)] max-md:px-[14px] max-md:py-[14px]";
 
-const mutedTextClassName = "text-[13px] text-slate-500";
+const mutedTextClassName = "text-[13px] text-slate-500 dark:text-slate-400";
 
 const errorClassName =
-  "flex flex-col gap-1 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-[14px] text-rose-700";
+  "flex flex-col gap-1 rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/50 px-4 py-[14px] text-rose-700 dark:text-rose-300";
 
 const detailPanelClassName =
-  "flex flex-col gap-2.5 rounded-[18px] border border-slate-200 bg-slate-50 p-[14px]";
+  "flex flex-col gap-2.5 rounded-[18px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-[14px]";
 
 const baseButtonClassName =
   "rounded-full border px-[14px] py-2 text-xs font-semibold transition disabled:cursor-default disabled:opacity-55 disabled:shadow-none";
@@ -69,12 +69,12 @@ function getBashCommand(input: Record<string, unknown>): string | null {
 function ToolStatusBadge({ status }: { status: string }) {
   const tone =
     status === "completed"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300"
       : status === "running"
-        ? "border-blue-200 bg-blue-50 text-blue-800"
+        ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300"
         : status === "error"
-          ? "border-rose-200 bg-rose-50 text-rose-800"
-          : "border-slate-200 bg-slate-50 text-slate-700";
+          ? "border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300"
+          : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300";
 
   return (
     <span
@@ -156,15 +156,15 @@ function ToolPartCard({
   const isReadWriteCollapsed = isReadWrite && !isReadWriteOpen;
 
   const toolCard = (
-    <div className="rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+    <div className="rounded-[14px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
       {!isReadWriteCollapsed && (
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1 text-[11px] font-semibold tracking-[0.04em] text-slate-600">
+              <div className="min-w-0 flex-1 text-[11px] font-semibold tracking-[0.04em] text-slate-600 dark:text-slate-400">
                 <span className="whitespace-nowrap">{headerToolLabel}</span>
                 {title && (
-                  <span className="ml-2 min-w-0 break-words font-normal text-slate-500">{String(title)}</span>
+                  <span className="ml-2 min-w-0 break-words font-normal text-slate-500 dark:text-slate-400">{String(title)}</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -172,7 +172,7 @@ function ToolPartCard({
                 {isReadWrite && (
                   <button
                     type="button"
-                    className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-50"
+                    className="rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-600"
                     onClick={() => setIsReadWriteOpen(false)}
                   >
                     Collapse
@@ -189,7 +189,7 @@ function ToolPartCard({
           className={[
             "flex w-full items-center justify-between gap-3 text-left text-[12px] leading-[1.55]",
             "overflow-hidden whitespace-nowrap",
-            "text-slate-800 hover:text-slate-950",
+            "text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white",
           ].join(" ")}
           role="button"
           tabIndex={0}
@@ -203,15 +203,15 @@ function ToolPartCard({
           }}
         >
           <span className="min-w-0 flex-1 truncate">
-            <span className="font-semibold text-slate-600">{headerToolLabel}</span>
-            {title && <span className="ml-2 text-slate-500">{String(title)}</span>}
+            <span className="font-semibold text-slate-600 dark:text-slate-400">{headerToolLabel}</span>
+            {title && <span className="ml-2 text-slate-500 dark:text-slate-400">{String(title)}</span>}
           </span>
           <span className="shrink-0">
             <span className="flex items-center gap-2">
               <ToolStatusBadge status={String(status)} />
               <button
                 type="button"
-                className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-50"
+                className="rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-600"
                 onClick={() => setIsReadWriteOpen(true)}
               >
                 Expand
@@ -222,7 +222,7 @@ function ToolPartCard({
       )}
 
       {isBash && bashCommand && (
-        <div className="mt-2 overflow-hidden rounded-[12px] border border-slate-200 bg-slate-950 text-slate-100">
+        <div className="mt-2 overflow-hidden rounded-[12px] border border-slate-200 dark:border-slate-600 bg-slate-950 text-slate-100">
           <div className="flex items-center justify-between gap-3 px-3">
             <pre className="min-w-0 flex-1 overflow-x-auto text-[12px] leading-[1.55] py-2">
               <code className="before:select-none before:text-emerald-400 before:content-['$_']">{bashCommand}</code>
@@ -254,10 +254,10 @@ function ToolPartCard({
 
       {!isBash && !isReadWrite && Object.keys(input).length > 0 && (
         <details className="mt-2">
-          <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500">
+          <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500 dark:text-slate-400">
             input
           </summary>
-          <pre className="mt-2 max-h-[220px] overflow-auto rounded-[12px] border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] leading-[1.55] text-slate-800">
+          <pre className="mt-2 max-h-[220px] overflow-auto rounded-[12px] border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-[12px] leading-[1.55] text-slate-800 dark:text-slate-200">
             <code>{safeStringify(input)}</code>
           </pre>
         </details>
@@ -265,10 +265,10 @@ function ToolPartCard({
 
       {!isBash && isReadWrite && isReadWriteOpen && Object.keys(input).length > 0 && (
         <details className="mt-2">
-          <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500">
+          <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500 dark:text-slate-400">
             input
           </summary>
-          <pre className="mt-2 max-h-[220px] overflow-auto rounded-[12px] border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] leading-[1.55] text-slate-800">
+          <pre className="mt-2 max-h-[220px] overflow-auto rounded-[12px] border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-[12px] leading-[1.55] text-slate-800 dark:text-slate-200">
             <code>{safeStringify(input)}</code>
           </pre>
         </details>
@@ -279,7 +279,7 @@ function ToolPartCard({
           <summary
             className={[
               "cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em]",
-              error ? "text-rose-700" : "text-slate-500",
+              error ? "text-rose-700 dark:text-rose-400" : "text-slate-500 dark:text-slate-400",
             ].join(" ")}
           >
             {error ? "error" : "output"}
@@ -288,8 +288,8 @@ function ToolPartCard({
             className={[
               "mt-2 max-h-[280px] overflow-auto rounded-[12px] border px-3 py-2 text-[12px] leading-[1.55]",
               error
-                ? "border-rose-200 bg-rose-50 text-rose-900"
-                : "border-slate-200 bg-slate-50 text-slate-800",
+                ? "border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/50 text-rose-900 dark:text-rose-200"
+                : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200",
             ].join(" ")}
           >
             <code>{error ?? output}</code>
@@ -309,7 +309,7 @@ function ToolPartCard({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex w-full shrink-0 flex-col gap-2 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="flex w-full shrink-0 flex-col gap-2 rounded-[14px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-[14px] py-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
         <SessionCardHeader
           session={taskSession}
           statusLabel={statusLabel}
@@ -319,8 +319,8 @@ function ToolPartCard({
         />
       </div>
 
-      <details className="rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500">
+      <details className="rounded-[14px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-[14px] py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
+        <summary className="cursor-pointer select-none text-[11px] font-semibold tracking-[0.04em] text-slate-500 dark:text-slate-400">
           task details
         </summary>
         <div className="mt-2">{toolCard}</div>
@@ -757,7 +757,7 @@ export const SessionDetailPage: React.FC<{
         <div className="mb-0.5 flex items-center justify-between gap-3">
           <button
             type="button"
-            className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-2 text-[14px] font-semibold text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 hover:text-slate-900"
+            className="shrink-0 rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-[14px] font-semibold text-slate-600 dark:text-slate-300 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] transition hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
             onClick={() => {
               const parentId = session ? getSessionParentId(session) : null;
               navigate(parentId ? `/sessions/${parentId}` : "/sessions");
@@ -769,24 +769,24 @@ export const SessionDetailPage: React.FC<{
 
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
-              <div className="min-w-0 truncate text-[13px] font-semibold text-slate-900">
+              <div className="min-w-0 truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
                 {titleLabel}
               </div>
               {!loading && !error && session && (
                 <button
                   type="button"
-                  className="shrink-0 rounded-full bg-slate-100 p-1.5 text-slate-700 transition hover:bg-slate-200"
+                  className="shrink-0 rounded-full bg-slate-100 dark:bg-slate-700 p-1.5 text-slate-700 dark:text-slate-300 transition hover:bg-slate-200 dark:hover:bg-slate-600"
                   onClick={() => setMobileDetailsOpen((v) => !v)}
                   aria-label={mobileDetailsOpen ? "Hide session details" : "Show session details"}
                   aria-expanded={mobileDetailsOpen}
                 >
-                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-[11px] font-bold leading-none">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 dark:border-slate-500 text-[11px] font-bold leading-none">
                     i
                   </span>
                 </button>
               )}
             </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
               {createdAt && <span>{formatDisplayTimestamp(createdAt) ?? formatDisplayDate(createdAt)}</span>}
             </div>
           </div>
@@ -799,8 +799,8 @@ export const SessionDetailPage: React.FC<{
                   className={[
                     "rounded-full px-3 py-1 text-[12px] font-semibold transition",
                     mobilePane === "thread"
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                      ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900"
+                      : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600",
                   ].join(" ")}
                   onClick={() => setMobilePane("thread")}
                 >
@@ -811,8 +811,8 @@ export const SessionDetailPage: React.FC<{
                   className={[
                     "rounded-full px-3 py-1 text-[12px] font-semibold transition",
                     mobilePane === "subtasks"
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                      ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900"
+                      : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600",
                   ].join(" ")}
                   onClick={() => setMobilePane("subtasks")}
                 >
@@ -820,7 +820,7 @@ export const SessionDetailPage: React.FC<{
                 </button>
               </div>
               {!loading && !error && session && (
-                <div className="text-[11px] text-slate-500">
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">
                   {activeChildCount} active · {readyChildCount} ready
                 </div>
               )}
@@ -833,7 +833,7 @@ export const SessionDetailPage: React.FC<{
             <div className="flex items-center justify-end">
               <button
                 type="button"
-                className="rounded-full bg-slate-100 px-3 py-1 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200"
+                className="rounded-full bg-slate-100 dark:bg-slate-700 px-3 py-1 text-[12px] font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-200 dark:hover:bg-slate-600"
                 onClick={() => setMobileDetailsOpen(false)}
                 aria-label="Close session details"
               >
@@ -841,20 +841,20 @@ export const SessionDetailPage: React.FC<{
               </button>
             </div>
             <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-              <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Title</span>
+              <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">Title</span>
               <span className="min-w-0 flex-1 break-words">
                 {session.title || "Untitled session"}
               </span>
             </div>
             {session.status && (
               <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Status</span>
+                <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">Status</span>
                 <span className="min-w-0 flex-1 break-words">{session.status}</span>
               </div>
             )}
             {session.directory && (
               <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                   Directory
                 </span>
                 <span className="min-w-0 flex-1 break-all font-mono">{session.directory}</span>
@@ -862,13 +862,13 @@ export const SessionDetailPage: React.FC<{
             )}
             {session.projectId && (
               <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Project</span>
+                <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">Project</span>
                 <span className="min-w-0 flex-1 break-all font-mono">{session.projectId}</span>
               </div>
             )}
             {session.rootId && session.rootId !== session.id && (
               <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                   Root session
                 </span>
                 <span className="min-w-0 flex-1 break-all font-mono">{session.rootId}</span>
@@ -876,13 +876,13 @@ export const SessionDetailPage: React.FC<{
             )}
             {createdAt && (
               <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Created</span>
+                <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">Created</span>
                 <span className="min-w-0 flex-1 break-words">{formatDisplayDate(createdAt)}</span>
               </div>
             )}
             {updatedAt && (
               <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                   Last updated
                 </span>
                 <span className="min-w-0 flex-1 break-words">{formatDisplayDate(updatedAt)}</span>
@@ -894,10 +894,10 @@ export const SessionDetailPage: React.FC<{
         {error && !loading && (
           <div className={errorClassName}>
             <div>Couldn&apos;t load this session.</div>
-            <div className="text-amber-700">
+            <div className="text-amber-700 dark:text-amber-400">
               Make sure <code>opencode web</code> is running, then try again.
             </div>
-            <div className="text-xs text-amber-700">{error}</div>
+            <div className="text-xs text-amber-700 dark:text-amber-400">{error}</div>
           </div>
         )}
 
@@ -913,14 +913,14 @@ export const SessionDetailPage: React.FC<{
                 {/* Desktop metadata panel now behind info toggle */}
                 <div className={`${detailPanelClassName} hidden`}>
                   <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                    <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">Title</span>
+                    <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">Title</span>
                     <span className="min-w-0 flex-1 break-words">
                       {session.title || "Untitled session"}
                     </span>
                   </div>
                   {session.status && (
                     <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                      <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                         Status
                       </span>
                       <span className="min-w-0 flex-1 break-words">{session.status}</span>
@@ -928,7 +928,7 @@ export const SessionDetailPage: React.FC<{
                   )}
                   {session.directory && (
                     <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                      <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                         Directory
                       </span>
                       <span className="min-w-0 flex-1 break-all font-mono">{session.directory}</span>
@@ -936,7 +936,7 @@ export const SessionDetailPage: React.FC<{
                   )}
                   {session.projectId && (
                     <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                      <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                         Project
                       </span>
                       <span className="min-w-0 flex-1 break-all font-mono">
@@ -946,7 +946,7 @@ export const SessionDetailPage: React.FC<{
                   )}
                   {session.rootId && session.rootId !== session.id && (
                     <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                      <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                         Root session
                       </span>
                       <span className="min-w-0 flex-1 break-all font-mono">{session.rootId}</span>
@@ -954,7 +954,7 @@ export const SessionDetailPage: React.FC<{
                   )}
                   {createdAt && (
                     <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                      <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                         Created
                       </span>
                       <span className="min-w-0 flex-1 break-words">
@@ -964,7 +964,7 @@ export const SessionDetailPage: React.FC<{
                   )}
                   {updatedAt && (
                     <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                      <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                         Last updated
                       </span>
                       <span className="min-w-0 flex-1 break-words">
@@ -974,10 +974,10 @@ export const SessionDetailPage: React.FC<{
                   )}
                   {hasSubtasks && (
                     <div className="flex items-start gap-2.5 max-md:flex-col max-md:items-start">
-                      <span className="w-[110px] shrink-0 text-slate-500 max-md:w-auto">
+                      <span className="w-[110px] shrink-0 text-slate-500 dark:text-slate-400 max-md:w-auto">
                         Sub-tasks
                       </span>
-                      <span className="min-w-0 flex-1 text-[12px] text-slate-600">
+                      <span className="min-w-0 flex-1 text-[12px] text-slate-600 dark:text-slate-400">
                         {directChildren.length} direct children · {activeChildCount} active ·{" "}
                         {readyChildCount} ready
                       </span>
@@ -993,7 +993,7 @@ export const SessionDetailPage: React.FC<{
               {messagesError && !loadingMessages && (
                 <div className={errorClassName}>
                   <div>Couldn&apos;t load messages.</div>
-                  <div className="text-xs text-amber-700">{messagesError}</div>
+                  <div className="text-xs text-amber-700 dark:text-amber-400">{messagesError}</div>
                 </div>
               )}
 
@@ -1004,7 +1004,7 @@ export const SessionDetailPage: React.FC<{
               {!loadingMessages && !messagesError && messages.length > 0 && (
                 <div
                   ref={messageListRef}
-                  className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded-[18px] border border-slate-200 bg-slate-100 p-3"
+                  className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded-[18px] border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900/60 p-3"
                 >
                   {messages.map((msg) => {
                     const created = formatDisplayDate(msg.info.createdAt);
@@ -1017,28 +1017,28 @@ export const SessionDetailPage: React.FC<{
                     return (
                       <div key={msg.info.id} className="flex flex-col gap-2">
                         {isUser ? (
-                          <div className="ml-auto inline-block w-fit max-w-[70%] rounded-[16px] border border-blue-200 bg-blue-50 px-[14px] py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] max-md:max-w-[92%]">
-                            <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                              {created && <span className="ml-auto text-slate-400">{created}</span>}
+                          <div className="ml-auto inline-block w-fit max-w-[70%] rounded-[16px] border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/50 px-[14px] py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] max-md:max-w-[92%]">
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                              {created && <span className="ml-auto text-slate-400 dark:text-slate-500">{created}</span>}
                               {msg.info.status && (
-                                <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-slate-700">
+                                <span className="inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-slate-700 dark:text-slate-300">
                                   {msg.info.status}
                                 </span>
                               )}
                             </div>
                             <Markdown
                               content={textParts.map((p) => p.text).join("\n")}
-                              className="mt-1 text-slate-900"
+                              className="mt-1 text-slate-900 dark:text-slate-100"
                             />
                           </div>
                         ) : (
                           <div className="w-full max-w-[860px]">
                             {created && (
-                              <div className="mb-1 text-[11px] text-slate-400">{created}</div>
+                              <div className="mb-1 text-[11px] text-slate-400 dark:text-slate-500">{created}</div>
                             )}
                             {msg.info.status && (
                               <div className="mb-2">
-                                <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-slate-700">
+                                <span className="inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-slate-700 dark:text-slate-300">
                                   {msg.info.status}
                                 </span>
                               </div>
@@ -1047,7 +1047,7 @@ export const SessionDetailPage: React.FC<{
                             {textParts.length > 0 && (
                               <Markdown
                                 content={textParts.map((p) => p.text).join("\n")}
-                                className="text-slate-900"
+                                className="text-slate-900 dark:text-slate-100"
                               />
                             )}
 
@@ -1071,14 +1071,14 @@ export const SessionDetailPage: React.FC<{
                                     return (
                                       <details
                                         key={index}
-                                        className="rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-[12px] text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                                        className="rounded-[14px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-[14px] py-3 text-[12px] text-slate-700 dark:text-slate-300 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
                                       >
-                                        <summary className="cursor-pointer select-none pl-3 text-[11px] font-semibold tracking-[0.04em] text-slate-500">
+                                        <summary className="cursor-pointer select-none pl-3 text-[11px] font-semibold tracking-[0.04em] text-slate-500 dark:text-slate-400">
                                           <span className="inline-flex items-center gap-1.5">
                                             <span>reasoning</span>
                                           </span>
                                         </summary>
-                                        <div className="mt-2 whitespace-pre-wrap leading-[1.55] text-slate-800">
+                                        <div className="mt-2 whitespace-pre-wrap leading-[1.55] text-slate-800 dark:text-slate-200">
                                           {part.text}
                                         </div>
                                       </details>
@@ -1102,7 +1102,7 @@ export const SessionDetailPage: React.FC<{
                                   return (
                                     <div
                                       key={index}
-                                      className="text-[11px] font-semibold tracking-[0.04em] text-slate-500"
+                                      className="text-[11px] font-semibold tracking-[0.04em] text-slate-500 dark:text-slate-400"
                                     >
                                       {baseType}
                                     </div>
@@ -1121,7 +1121,7 @@ export const SessionDetailPage: React.FC<{
               <div className="flex flex-col gap-2">
                 <div className="relative">
                   <textarea
-                    className="min-h-[72px] w-full max-h-[180px] resize-y rounded-[14px] border border-slate-300 bg-white px-[13px] py-3 pr-[92px] pb-[52px] text-slate-900 placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-200/60"
+                    className="min-h-[72px] w-full max-h-[180px] resize-y rounded-[14px] border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-[13px] py-3 pr-[92px] pb-[52px] text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-300 dark:focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-200/60 dark:focus:ring-blue-800/60"
                     placeholder="Write a message…"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -1130,7 +1130,7 @@ export const SessionDetailPage: React.FC<{
                   />
                   <button
                     type="button"
-                    className="absolute bottom-3 right-3 rounded-full border border-transparent bg-blue-600 px-[14px] py-2 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(37,99,235,0.18)] transition hover:bg-blue-700 disabled:cursor-default disabled:opacity-55 disabled:shadow-none"
+                    className="absolute bottom-3 right-3 rounded-full border border-transparent bg-blue-600 dark:bg-blue-500 px-[14px] py-2 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(37,99,235,0.18)] dark:shadow-[0_10px_20px_rgba(37,99,235,0.25)] transition hover:bg-blue-700 dark:hover:bg-blue-600 disabled:cursor-default disabled:opacity-55 disabled:shadow-none"
                     disabled={submitting || !input.trim()}
                     onClick={() => handleSubmit()}
                   >
@@ -1140,7 +1140,7 @@ export const SessionDetailPage: React.FC<{
                 {submitError && (
                   <div className={errorClassName}>
                     <div>Couldn&apos;t send message.</div>
-                    <div className="text-xs text-amber-700">{submitError}</div>
+                    <div className="text-xs text-amber-700 dark:text-amber-400">{submitError}</div>
                   </div>
                 )}
               </div>
@@ -1154,10 +1154,10 @@ export const SessionDetailPage: React.FC<{
                   !hasSubtasks ? "hidden lg:flex" : "",
                 ].join(" ")}
               >
-                <div className="flex min-h-0 flex-1 flex-col rounded-[18px] border border-slate-200 bg-slate-50 p-[14px]">
+                <div className="flex min-h-0 flex-1 flex-col rounded-[18px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-[14px]">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="text-sm font-bold text-slate-900">Sub-task board</div>
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-sm font-bold text-slate-900 dark:text-slate-100">Sub-task board</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
                       {directChildren.length > 0
                         ? `${directChildren.length} sub-tasks`
                         : "No sub-tasks"}
@@ -1168,13 +1168,13 @@ export const SessionDetailPage: React.FC<{
                     <div className={mutedTextClassName}>Loading sub-tasks…</div>
                   )}
                   {subtasksError && !loadingSubtasks && (
-                    <div className="rounded-[14px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+                    <div className="rounded-[14px] border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300">
                       {subtasksError}
                     </div>
                   )}
 
                   {!loadingSubtasks && !subtasksError && directChildren.length === 0 && (
-                    <div className="flex min-h-[120px] flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 bg-white/65 p-[14px] text-[13px] text-slate-400">
+                    <div className="flex min-h-[120px] flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 dark:border-slate-600 bg-white/65 dark:bg-slate-800/40 p-[14px] text-[13px] text-slate-400 dark:text-slate-500">
                       No sub-tasks for this session.
                     </div>
                   )}
@@ -1190,19 +1190,19 @@ export const SessionDetailPage: React.FC<{
                         return (
                           <div
                             key={column.key}
-                            className="flex h-full min-h-0 min-w-[260px] shrink-0 flex-col rounded-[16px] border border-slate-200 bg-white p-3 md:min-w-[280px]"
+                            className="flex h-full min-h-0 min-w-[260px] shrink-0 flex-col rounded-[16px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:min-w-[280px]"
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-bold text-slate-900">
+                              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
                                 {column.title}
                               </span>
-                              <span className="min-w-7 rounded-full border border-slate-200 bg-slate-50 px-[9px] py-[3px] text-center text-xs text-slate-500">
+                              <span className="min-w-7 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 px-[9px] py-[3px] text-center text-xs text-slate-500 dark:text-slate-400">
                                 {sessionsForColumn.length}
                               </span>
                             </div>
                             <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
                               {sessionsForColumn.length === 0 && (
-                                <div className="flex min-h-[96px] flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 bg-slate-50 p-[14px] text-[13px] text-slate-400">
+                                <div className="flex min-h-[96px] flex-1 items-center justify-center rounded-[14px] border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 p-[14px] text-[13px] text-slate-400 dark:text-slate-500">
                                   {column.emptyMessage}
                                 </div>
                               )}
@@ -1222,7 +1222,7 @@ export const SessionDetailPage: React.FC<{
                                 return (
                                   <div
                                     key={child.id}
-                                    className="flex w-full shrink-0 flex-col gap-2 rounded-[14px] border border-slate-200 bg-white px-[14px] py-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                                    className="flex w-full shrink-0 flex-col gap-2 rounded-[14px] border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800/80 px-[14px] py-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
                                   >
                                     <SessionCardHeader
                                       session={child}
@@ -1236,7 +1236,7 @@ export const SessionDetailPage: React.FC<{
                                       <div className="flex items-center justify-between gap-2">
                                         <button
                                           type="button"
-                                          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 transition hover:bg-slate-200"
+                                          className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 transition hover:bg-slate-200 dark:hover:bg-slate-600"
                                           onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
@@ -1253,7 +1253,7 @@ export const SessionDetailPage: React.FC<{
                                           }
                                         >
                                           <span>{directAgents.length} sub-agents</span>
-                                          <span className="text-[12px] text-slate-500">
+                                          <span className="text-[12px] text-slate-500 dark:text-slate-400">
                                             {isExpanded ? "▾" : "▸"}
                                           </span>
                                         </button>
@@ -1261,8 +1261,8 @@ export const SessionDetailPage: React.FC<{
                                     )}
 
                                     {hasDirectAgents && isExpanded && (
-                                      <div className="flex flex-col gap-1 rounded-[12px] border border-slate-200 bg-slate-50 px-2.5 py-2">
-                                        <div className="px-0.5 text-[11px] font-semibold text-slate-500">
+                                      <div className="flex flex-col gap-1 rounded-[12px] border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-2">
+                                        <div className="px-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                                           Sub-agents (oldest first)
                                         </div>
                                         <div className="flex flex-col gap-1">
@@ -1281,21 +1281,21 @@ export const SessionDetailPage: React.FC<{
                                               <button
                                                 key={agent.id}
                                                 type="button"
-                                                className="flex items-center justify-between gap-2 rounded-[12px] border border-slate-200 bg-white px-2.5 py-1.5 text-left text-[12px] text-slate-700 transition hover:border-blue-200 hover:bg-blue-50/60"
+                                                className="flex items-center justify-between gap-2 rounded-[12px] border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-left text-[12px] text-slate-700 dark:text-slate-300 transition hover:border-blue-200 dark:hover:border-blue-700 hover:bg-blue-50/60 dark:hover:bg-blue-950/40"
                                                 onClick={() => navigate(`/sessions/${agent.id}`)}
                                               >
                                                 <div className="min-w-0 flex-1">
                                                   <div className="truncate font-medium">
                                                     {agent.title || agent.id.slice(0, 8)}
                                                   </div>
-                                                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                                                    <span className="rounded-full bg-emerald-100 px-2 py-[2px] text-[10px] font-semibold text-emerald-800">
+                                                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                                                    <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/50 px-2 py-[2px] text-[10px] font-semibold text-emerald-800 dark:text-emerald-300">
                                                       {agentStatusLabel}
                                                     </span>
                                                     {agentCreatedAt && <span>{agentCreatedAt}</span>}
                                                   </div>
                                                 </div>
-                                                <span className="shrink-0 text-slate-400">›</span>
+                                                <span className="shrink-0 text-slate-400 dark:text-slate-500">›</span>
                                               </button>
                                             );
                                           })}

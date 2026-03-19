@@ -2,7 +2,7 @@
 
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: light dark;
   }
 
   *,
@@ -37,6 +37,16 @@
       radial-gradient(circle at top left, rgba(219, 234, 254, 0.9), transparent 32%),
       linear-gradient(180deg, #fbfcfe 0%, #f5f7fb 100%);
     color: #0f172a;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html,
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(30, 58, 138, 0.35), transparent 32%),
+        linear-gradient(180deg, #0b1120 0%, #0f172a 100%);
+      color: #e2e8f0;
+    }
   }
 
   #root {
