@@ -78,7 +78,7 @@ function renderInline(tokens: InlineToken[], keyPrefix: string): React.ReactNode
       return (
         <code
           key={key}
-          className="rounded bg-slate-100 px-1 py-[1px] font-mono text-[12px] text-slate-900"
+          className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-[1px] font-mono text-[12px] text-slate-900 dark:text-slate-200"
         >
           {t.value}
         </code>
@@ -92,7 +92,7 @@ function renderInline(tokens: InlineToken[], keyPrefix: string): React.ReactNode
           href={safeHref}
           target="_blank"
           rel="noreferrer"
-          className="text-blue-700 underline decoration-blue-300 underline-offset-2 hover:decoration-blue-500"
+          className="text-blue-700 dark:text-blue-400 underline decoration-blue-300 dark:decoration-blue-700 underline-offset-2 hover:decoration-blue-500 dark:hover:decoration-blue-500"
         >
           {t.text}
         </a>
@@ -252,7 +252,7 @@ function parseBlocks(markdown: string): Block[] {
 export function Markdown({ content, className }: { content: string; className?: string }) {
   const blocks = parseBlocks(content);
   return (
-    <div className={["min-w-0 text-[13px] leading-[1.6] text-slate-900", className ?? ""].join(" ")}>
+    <div className={["min-w-0 text-[13px] leading-[1.6] text-slate-900 dark:text-slate-100", className ?? ""].join(" ")}>
       {blocks.map((b, idx) => {
         if (b.type === "heading") {
           const levelClass =
@@ -282,7 +282,7 @@ export function Markdown({ content, className }: { content: string; className?: 
 
         if (b.type === "code") {
           return (
-            <div key={idx} className="mt-2 overflow-hidden rounded-[12px] border border-slate-200 bg-slate-950 first:mt-0">
+            <div key={idx} className="mt-2 overflow-hidden rounded-[12px] border border-slate-200 dark:border-slate-700 bg-slate-950 first:mt-0">
               {b.language && (
                 <div className="border-b border-slate-800 px-3 py-2 text-[11px] font-semibold tracking-[0.04em] text-slate-300">
                   {b.language}
@@ -302,16 +302,16 @@ export function Markdown({ content, className }: { content: string; className?: 
           return (
             <div
               key={idx}
-              className="mt-2 overflow-x-auto rounded-[12px] border border-slate-200 bg-white first:mt-0"
+              className="mt-2 overflow-x-auto rounded-[12px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 first:mt-0"
             >
               <table className="min-w-full border-collapse text-[12px] leading-[1.5]">
-                <thead className="bg-slate-50">
+                <thead className="bg-slate-50 dark:bg-slate-800/80">
                   <tr>
                     {Array.from({ length: colCount }).map((_, c) => (
                       <th
                         key={c}
                         className={[
-                          "border-b border-slate-200 px-3 py-2 font-semibold text-slate-700",
+                          "border-b border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold text-slate-700 dark:text-slate-300",
                           colClass(b.align[c] ?? null),
                         ].join(" ")}
                       >
@@ -322,12 +322,12 @@ export function Markdown({ content, className }: { content: string; className?: 
                 </thead>
                 <tbody>
                   {b.rows.map((row, rIdx) => (
-                    <tr key={rIdx} className={rIdx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}>
+                    <tr key={rIdx} className={rIdx % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50/40 dark:bg-slate-800/50"}>
                       {Array.from({ length: colCount }).map((_, c) => (
                         <td
                           key={c}
                           className={[
-                            "border-b border-slate-100 px-3 py-2 align-top text-slate-800",
+                            "border-b border-slate-100 dark:border-slate-700 px-3 py-2 align-top text-slate-800 dark:text-slate-200",
                             colClass(b.align[c] ?? null),
                           ].join(" ")}
                         >

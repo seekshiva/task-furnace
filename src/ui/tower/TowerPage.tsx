@@ -16,27 +16,27 @@ type TowerCommitFile = {
 };
 
 const shellBodyClassName =
-  "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-[18px] text-[13px] leading-[1.55] shadow-[0_16px_40px_rgba(15,23,42,0.08)] max-md:px-[14px] max-md:py-[14px]";
+  "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-[20px] border border-slate-200 dark:border-slate-700 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] dark:bg-[linear-gradient(180deg,#0f172a_0%,#1e293b_100%)] p-[18px] text-[13px] leading-[1.55] shadow-[0_16px_40px_rgba(15,23,42,0.08)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.3)] max-md:px-[14px] max-md:py-[14px]";
 
-const mutedTextClassName = "text-[13px] text-slate-500";
+const mutedTextClassName = "text-[13px] text-slate-500 dark:text-slate-400";
 
 const errorClassName =
-  "flex flex-col gap-1 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-[14px] text-rose-700";
+  "flex flex-col gap-1 rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/50 px-4 py-[14px] text-rose-700 dark:text-rose-300";
 
 const towerRowClassName =
-  "w-full cursor-pointer rounded-[14px] border border-slate-200 bg-white p-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:-translate-y-px hover:border-blue-200 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)]";
+  "w-full cursor-pointer rounded-[14px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] transition duration-150 hover:-translate-y-px hover:border-blue-200 dark:hover:border-blue-700 hover:shadow-[0_12px_24px_rgba(37,99,235,0.08)] dark:hover:shadow-[0_12px_24px_rgba(37,99,235,0.15)]";
 
 function getFileStatusBadgeClassName(statusCode: string) {
   switch (statusCode) {
     case "A":
-      return "bg-emerald-100 text-emerald-800";
+      return "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300";
     case "D":
-      return "bg-rose-100 text-rose-700";
+      return "bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300";
     case "R":
     case "C":
-      return "bg-amber-100 text-amber-700";
+      return "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300";
     default:
-      return "bg-blue-100 text-blue-700";
+      return "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300";
   }
 }
 
@@ -167,12 +167,12 @@ export const TowerPage: React.FC = () => {
   return (
     <section className="flex min-h-0 w-full flex-1 flex-col">
       <div className={shellBodyClassName}>
-        <div className="text-sm font-semibold text-slate-900">Tower</div>
+        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Tower</div>
         {loading && <div className={mutedTextClassName}>Loading recent commits…</div>}
         {error && !loading && (
           <div className={errorClassName}>
             <div>Couldn&apos;t load commits.</div>
-            <div className="text-xs text-amber-700">{error}</div>
+            <div className="text-xs text-amber-700 dark:text-amber-400">{error}</div>
           </div>
         )}
 
@@ -201,14 +201,14 @@ export const TowerPage: React.FC = () => {
                       className={[
                         towerRowClassName,
                         isSelected
-                          ? "border-blue-300 bg-sky-50 shadow-[0_0_0_3px_rgba(147,197,253,0.22)]"
+                          ? "border-blue-300 dark:border-blue-600 bg-sky-50 dark:bg-blue-950/40 shadow-[0_0_0_3px_rgba(147,197,253,0.22)] dark:shadow-[0_0_0_3px_rgba(37,99,235,0.25)]"
                           : "",
                       ].join(" ")}
                       onClick={() => handleSelectCommit(commit)}
                     >
                       <div className="flex min-w-0 flex-col gap-1">
-                        <div className="text-sm font-semibold text-slate-900">{commit.message}</div>
-                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{commit.message}</div>
+                        <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
                           <span>{commit.author}</span>
                           <span>
                             {formatDisplayDate(commit.date)}
@@ -234,12 +234,12 @@ export const TowerPage: React.FC = () => {
               )}
 
               {selectedCommit && (
-                <div className="flex min-h-0 flex-1 flex-col gap-2.5 rounded-[18px] border border-slate-200 bg-slate-50 p-[14px]">
+                <div className="flex min-h-0 flex-1 flex-col gap-2.5 rounded-[18px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-[14px]">
                   <div className="flex min-h-0 flex-col gap-2">
-                    <div className="text-sm font-semibold text-slate-900">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {selectedCommit.message}
                     </div>
-                    <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                    <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
                       <span>{selectedCommit.author}</span>
                       <span>{formatDisplayDate(selectedCommit.date)}</span>
                       <span className="font-mono">{selectedCommit.hash.slice(0, 10)}</span>
@@ -253,7 +253,7 @@ export const TowerPage: React.FC = () => {
                     {filesError && !filesLoading && (
                       <div className={errorClassName}>
                         <div>Couldn&apos;t load changed files.</div>
-                        <div className="text-xs text-amber-700">{filesError}</div>
+                        <div className="text-xs text-amber-700 dark:text-amber-400">{filesError}</div>
                       </div>
                     )}
 
@@ -281,7 +281,7 @@ export const TowerPage: React.FC = () => {
                           return (
                             <div
                               key={file.path}
-                              className="rounded-[14px] border border-slate-200 bg-white px-[11px] py-[9px] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                              className="rounded-[14px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-[11px] py-[9px] shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
                             >
                               <div className="flex items-center justify-between gap-2.5 max-md:flex-col max-md:items-start">
                                 <span className="break-all text-xs">{file.path}</span>
@@ -291,7 +291,7 @@ export const TowerPage: React.FC = () => {
                                   {statusLabel}
                                 </span>
                               </div>
-                              <div className="mt-1 text-[11px] text-slate-500">
+                              <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                                 <span className="font-mono">
                                   +{file.additions} / -{file.deletions}
                                 </span>
