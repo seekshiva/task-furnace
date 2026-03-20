@@ -241,25 +241,36 @@ const SessionCard: React.FC<{
         session={session}
         statusLabel={statusLabel}
         createdLabel={createdLabel ?? null}
-        onClick={() => navigate(`/sessions/${session.id}`)}
+        onClick={() => navigate(`/sessions/${session.source === "claude-code" ? `cc-${session.id}` : session.id}`)}
         buttonClassName={sessionRowClassName}
         extraBadges={
-          hasSubtree ? (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 transition hover:bg-slate-200 dark:hover:bg-slate-600"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleTree();
-              }}
-              aria-expanded={hasSubtree ? isTreeExpanded : undefined}
-              aria-label={isTreeExpanded ? "Hide sub-agent sessions" : "Show sub-agent sessions"}
-            >
-              <span>{directAgentCount} sub-agents</span>
-              <span className="text-[12px] text-slate-500 dark:text-slate-400">{isTreeExpanded ? "▾" : "▸"}</span>
-            </button>
-          ) : null
+          <>
+            {session.source === "claude-code" ? (
+              <span className="rounded-full bg-violet-100 dark:bg-violet-900/45 px-2 py-0.5 text-[11px] font-semibold text-violet-800 dark:text-violet-200">
+                Claude Code
+              </span>
+            ) : session.source === "opencode" ? (
+              <span className="rounded-full bg-blue-100 dark:bg-blue-900/45 px-2 py-0.5 text-[11px] font-semibold text-blue-800 dark:text-blue-200">
+                OpenCode
+              </span>
+            ) : null}
+            {hasSubtree ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 transition hover:bg-slate-200 dark:hover:bg-slate-600"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleTree();
+                }}
+                aria-expanded={hasSubtree ? isTreeExpanded : undefined}
+                aria-label={isTreeExpanded ? "Hide sub-agent sessions" : "Show sub-agent sessions"}
+              >
+                <span>{directAgentCount} sub-agents</span>
+                <span className="text-[12px] text-slate-500 dark:text-slate-400">{isTreeExpanded ? "▾" : "▸"}</span>
+              </button>
+            ) : null}
+          </>
         }
       />
 
@@ -335,16 +346,25 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
         setLoading(true);
         setError(null);
 
-        const [sessionsRes, statusRes, activityRes] = await Promise.all([
+        const [sessionsRes, claudeSessionsRes, statusRes, activityRes, claudeActivityRes] = await Promise.all([
           fetch("/api/sessions"),
+          fetch("/api/claude/sessions"),
           fetch("/api/sessions/status"),
           fetch("/api/sessions/activity"),
+          fetch("/api/claude/sessions/activity"),
         ]);
 
         if (!sessionsRes.ok) {
           throw new Error(`Sessions request failed with status ${sessionsRes.status}`);
         }
         const body = (await sessionsRes.json()) as { sessions?: Session[] };
+        const opencodeSessions = (body.sessions ?? []).map((s) => ({ ...s, source: "opencode" as const }));
+
+        let claudeSessions: Session[] = [];
+        if (claudeSessionsRes.ok) {
+          const claudeBody = (await claudeSessionsRes.json()) as { sessions?: Session[] };
+          claudeSessions = claudeBody.sessions ?? [];
+        }
 
         let statusBody: { status?: SessionStatusMap } | null = null;
         if (statusRes.ok) {
@@ -356,18 +376,23 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
           activityBody = (await activityRes.json()) as { activity?: SessionActivityMap };
         }
 
+        let claudeActivityBody: { activity?: SessionActivityMap } | null = null;
+        if (claudeActivityRes.ok) {
+          claudeActivityBody = (await claudeActivityRes.json()) as { activity?: SessionActivityMap };
+        }
+
         if (!cancelled) {
-          setSessions(body.sessions ?? []);
+          setSessions([...opencodeSessions, ...claudeSessions]);
           if (statusBody?.status) {
             setSessionStatus(statusBody.status);
           } else {
             setSessionStatus({});
           }
-          if (activityBody?.activity) {
-            setActivity(activityBody.activity);
-          } else {
-            setActivity({});
-          }
+          const mergedActivity = {
+            ...(activityBody?.activity ?? {}),
+            ...(claudeActivityBody?.activity ?? {}),
+          };
+          setActivity(mergedActivity);
         }
       } catch (err) {
         if (!cancelled) {
@@ -392,15 +417,23 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
     const interval = window.setInterval(() => {
       void (async () => {
         try {
-          const [sessionsRes, statusRes, activityRes] = await Promise.all([
+          const [sessionsRes, claudeSessionsRes, statusRes, activityRes, claudeActivityRes] = await Promise.all([
             fetch("/api/sessions"),
+            fetch("/api/claude/sessions"),
             fetch("/api/sessions/status"),
             fetch("/api/sessions/activity"),
+            fetch("/api/claude/sessions/activity"),
           ]);
 
           if (sessionsRes.ok) {
             const body = (await sessionsRes.json()) as { sessions?: Session[] };
-            setSessions(body.sessions ?? []);
+            const opencodeSessions = (body.sessions ?? []).map((s) => ({ ...s, source: "opencode" as const }));
+            let claudeSessions: Session[] = [];
+            if (claudeSessionsRes.ok) {
+              const claudeBody = (await claudeSessionsRes.json()) as { sessions?: Session[] };
+              claudeSessions = claudeBody.sessions ?? [];
+            }
+            setSessions([...opencodeSessions, ...claudeSessions]);
           }
 
           if (statusRes.ok) {
@@ -408,9 +441,17 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
             setSessionStatus(body.status ?? {});
           }
 
-          if (activityRes.ok) {
-            const body = (await activityRes.json()) as { activity?: SessionActivityMap };
-            setActivity(body.activity ?? {});
+          {
+            const merged: SessionActivityMap = {};
+            if (activityRes.ok) {
+              const body = (await activityRes.json()) as { activity?: SessionActivityMap };
+              Object.assign(merged, body.activity ?? {});
+            }
+            if (claudeActivityRes.ok) {
+              const body = (await claudeActivityRes.json()) as { activity?: SessionActivityMap };
+              Object.assign(merged, body.activity ?? {});
+            }
+            setActivity(merged);
           }
         } catch {
           // Best-effort refresh; keep existing state on failure.

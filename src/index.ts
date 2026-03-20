@@ -1,6 +1,12 @@
 import indexHtml from "./ui/index.html";
 import { $ } from "bun";
 import { createOpencodeClient } from "@opencode-ai/sdk";
+import {
+  listSessions as claudeListSessions,
+  getSessionMessages as claudeGetSessionMessages,
+  query as claudeQuery,
+} from "@anthropic-ai/claude-agent-sdk";
+import type { SDKSessionInfo, SessionMessage as ClaudeSessionMessage, Query as ClaudeQuery } from "@anthropic-ai/claude-agent-sdk";
 
 // TODO: Implement TaskFurnace engine core and expose a public API from this module.
 // For now, this file serves as the dev entrypoint that runs the React shell UI.
@@ -8,11 +14,12 @@ import { createOpencodeClient } from "@opencode-ai/sdk";
 const port = Number(process.env.PORT ?? 3000);
 
 const opencodeBaseUrl = process.env.OPENCODE_BASE_URL ?? "http://127.0.0.1:4096";
+const connectorServicePath = process.env.CONNECTOR_SERVICE_PATH;
+
 const opencodeClient = createOpencodeClient({
   baseUrl: opencodeBaseUrl,
+  ...(connectorServicePath ? { directory: connectorServicePath } : {}),
 });
-
-const connectorServicePath = process.env.CONNECTOR_SERVICE_PATH;
 
 type SessionActivityStatus = {
   statusType: "busy" | "retry" | "idle" | "unknown";
@@ -73,6 +80,135 @@ function updateSessionActivity(sessionID: string, statusType: string | null | un
     isActive,
     lastEventAt: now,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Claude Code session helpers
+// ---------------------------------------------------------------------------
+
+const claudeProjectDir = connectorServicePath ?? process.cwd();
+
+/** Active queries launched via the prompt endpoint. */
+const activeClaudeQueries = new Map<string, ClaudeQuery>();
+
+/** Map an SDKSessionInfo to the frontend Session shape. */
+function mapClaudeSession(info: SDKSessionInfo) {
+  const now = Date.now();
+  const isRecentlyModified = now - info.lastModified < 30_000;
+  const isActive = activeClaudeQueries.has(info.sessionId);
+
+  let status: string;
+  if (isActive || isRecentlyModified) {
+    status = "busy";
+  } else if (info.summary && info.summary !== info.firstPrompt) {
+    // If summary differs from the first prompt the session likely has a
+    // generated summary → treat as done.
+    status = "done";
+  } else {
+    status = "idle";
+  }
+
+  return {
+    id: info.sessionId,
+    title: info.customTitle ?? info.summary ?? null,
+    status,
+    time: {
+      created: info.createdAt ? new Date(info.createdAt).toISOString() : new Date(info.lastModified).toISOString(),
+      updated: new Date(info.lastModified).toISOString(),
+    },
+    directory: info.cwd ?? null,
+    source: "claude-code" as const,
+  };
+}
+
+type ContentBlock = { type: string; [key: string]: unknown };
+
+/** Map Claude SDK SessionMessage[] → frontend SessionMessage[]. */
+function mapClaudeMessages(sdkMessages: ClaudeSessionMessage[]) {
+  // Build a lookup: tool_use_id → tool_result content
+  const toolResults = new Map<string, { content: unknown; isError: boolean }>();
+
+  for (const msg of sdkMessages) {
+    if (msg.type !== "user") continue;
+    const message = msg.message as { content?: ContentBlock[] } | undefined;
+    const blocks = Array.isArray(message?.content) ? message!.content : [];
+    for (const block of blocks) {
+      if (block.type === "tool_result" && typeof block.tool_use_id === "string") {
+        const rawContent = block.content;
+        let text = "";
+        if (typeof rawContent === "string") {
+          text = rawContent;
+        } else if (Array.isArray(rawContent)) {
+          text = rawContent
+            .filter((b: any) => b?.type === "text" && typeof b.text === "string")
+            .map((b: any) => b.text)
+            .join("\n");
+        }
+        toolResults.set(block.tool_use_id as string, {
+          content: text,
+          isError: Boolean(block.is_error),
+        });
+      }
+    }
+  }
+
+  const mapped: Array<{
+    info: { id: string; role: string; createdAt: string | null };
+    parts: Array<Record<string, unknown>>;
+  }> = [];
+
+  for (const msg of sdkMessages) {
+    const message = msg.message as { content?: ContentBlock[] } | undefined;
+    const blocks = Array.isArray(message?.content) ? message!.content : [];
+    const parts: Array<Record<string, unknown>> = [];
+
+    for (const block of blocks) {
+      if (block.type === "text" && typeof block.text === "string") {
+        parts.push({ type: "text", text: block.text });
+      } else if (block.type === "thinking" && typeof block.thinking === "string") {
+        parts.push({ type: "reasoning", text: block.thinking });
+      } else if (block.type === "tool_use") {
+        const toolResult = toolResults.get(block.id as string);
+        const state: Record<string, unknown> = {
+          status: toolResult?.isError ? "error" : "completed",
+          input: block.input ?? {},
+        };
+        if (toolResult) {
+          if (toolResult.isError) {
+            state.error = toolResult.content;
+          } else {
+            state.output = toolResult.content;
+          }
+        }
+        parts.push({
+          type: "tool",
+          tool: block.name,
+          callID: block.id,
+          state,
+        });
+      } else if (block.type === "tool_result") {
+        // Already handled via the lookup; skip in user messages.
+        continue;
+      }
+    }
+
+    if (parts.length === 0 && msg.type === "user") {
+      // Some user messages may be plain strings.
+      const rawContent = (msg.message as any)?.content;
+      if (typeof rawContent === "string" && rawContent.trim()) {
+        parts.push({ type: "text", text: rawContent });
+      }
+    }
+
+    if (parts.length > 0) {
+      mapped.push({
+        info: { id: msg.uuid, role: msg.type, createdAt: null },
+        parts,
+      });
+    }
+  }
+
+  return mapped;
 }
 
 async function startEventSubscription() {
@@ -439,6 +575,119 @@ const server = Bun.serve({
           console.error("git pull origin main failed", stderr);
           return Response.json(
             { success: false, error: stderr },
+            { status: 500 },
+          );
+        }
+      },
+    },
+    // -----------------------------------------------------------------
+    // Claude Code session routes
+    // -----------------------------------------------------------------
+    "/api/claude/sessions": {
+      GET: async () => {
+        try {
+          const sessions = await claudeListSessions({ dir: claudeProjectDir, limit: 300 });
+          return Response.json({ sessions: sessions.map(mapClaudeSession) });
+        } catch (error) {
+          console.error("Failed to list Claude Code sessions", error);
+          return new Response(
+            JSON.stringify({ error: "Failed to list Claude Code sessions" }),
+            { status: 500 },
+          );
+        }
+      },
+    },
+    "/api/claude/sessions/activity": {
+      GET: () => {
+        const activity: Record<
+          string,
+          { state: "active" | "ready"; rawType: string | null; lastEventAt: number | null }
+        > = {};
+
+        for (const [sessionId, q] of activeClaudeQueries.entries()) {
+          activity[sessionId] = {
+            state: "active",
+            rawType: "busy",
+            lastEventAt: Date.now(),
+          };
+        }
+
+        return Response.json({ activity });
+      },
+    },
+    "/api/claude/sessions/:sessionId": {
+      GET: async (req) => {
+        const { sessionId } = req.params;
+        try {
+          const sessions = await claudeListSessions({ dir: claudeProjectDir });
+          const info = sessions.find((s) => s.sessionId === sessionId);
+          if (!info) {
+            return new Response(JSON.stringify({ error: "Session not found" }), { status: 404 });
+          }
+          return Response.json({ session: mapClaudeSession(info) });
+        } catch (error) {
+          console.error(`Failed to load Claude Code session ${sessionId}`, error);
+          return new Response(
+            JSON.stringify({ error: "Failed to load Claude Code session" }),
+            { status: 500 },
+          );
+        }
+      },
+    },
+    "/api/claude/sessions/:sessionId/messages": {
+      GET: async (req) => {
+        const { sessionId } = req.params;
+        try {
+          const sdkMessages = await claudeGetSessionMessages(sessionId, { dir: claudeProjectDir });
+          return Response.json({ messages: mapClaudeMessages(sdkMessages) });
+        } catch (error) {
+          console.error(`Failed to load Claude Code messages for ${sessionId}`, error);
+          return new Response(
+            JSON.stringify({ error: "Failed to load Claude Code session messages" }),
+            { status: 500 },
+          );
+        }
+      },
+    },
+    "/api/claude/sessions/:sessionId/prompt": {
+      POST: async (req) => {
+        const { sessionId } = req.params;
+        try {
+          const body = await req.json();
+          const text = typeof body?.text === "string" ? body.text.trim() : "";
+
+          if (!text) {
+            return new Response(
+              JSON.stringify({ error: "Missing or empty 'text' field in request body" }),
+              { status: 400 },
+            );
+          }
+
+          const queryGen = claudeQuery({
+            prompt: text,
+            options: { resume: sessionId, cwd: claudeProjectDir },
+          });
+
+          activeClaudeQueries.set(sessionId, queryGen);
+
+          // Consume the generator in the background.
+          (async () => {
+            try {
+              for await (const _msg of queryGen) {
+                // Just consume; messages are persisted to disk by the SDK.
+              }
+            } catch (err) {
+              console.error(`Claude Code query error for session ${sessionId}`, err);
+            } finally {
+              activeClaudeQueries.delete(sessionId);
+            }
+          })();
+
+          return Response.json({ ok: true });
+        } catch (error) {
+          console.error(`Failed to send prompt to Claude Code session ${sessionId}`, error);
+          return new Response(
+            JSON.stringify({ error: "Failed to send prompt to Claude Code session" }),
             { status: 500 },
           );
         }

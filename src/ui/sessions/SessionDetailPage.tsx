@@ -380,7 +380,10 @@ function getChronologicalTimestamp(session: Session): number {
 export const SessionDetailPage: React.FC<{
   sessionId: string;
   navigate: (path: string) => void;
-}> = ({ sessionId, navigate }) => {
+}> = ({ sessionId: rawSessionId, navigate }) => {
+  const isClaude = rawSessionId.startsWith("cc-");
+  const sessionId = isClaude ? rawSessionId.slice(3) : rawSessionId;
+  const apiBase = isClaude ? "/api/claude/sessions" : "/api/sessions";
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -417,7 +420,7 @@ export const SessionDetailPage: React.FC<{
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`);
+        const res = await fetch(`${apiBase}/${encodeURIComponent(sessionId)}`);
         if (!res.ok) {
           throw new Error(`Request failed with status ${res.status}`);
         }
@@ -448,6 +451,8 @@ export const SessionDetailPage: React.FC<{
 
     async function loadSubtasks(opts?: { background?: boolean }) {
       if (!sessionId) return;
+      // Claude Code sessions are flat — no sub-agent hierarchy.
+      if (isClaude) return;
 
       const isBackground = opts?.background === true;
       const boardEl = subtaskBoardScrollRef.current;
@@ -596,7 +601,7 @@ export const SessionDetailPage: React.FC<{
       setMessagesError(null);
 
       const res = await fetch(
-        `/api/sessions/${encodeURIComponent(currentSessionId)}/messages`,
+        `${apiBase}/${encodeURIComponent(currentSessionId)}/messages`,
       );
       if (!res.ok) {
         throw new Error(`Request failed with status ${res.status}`);
@@ -667,6 +672,17 @@ export const SessionDetailPage: React.FC<{
   }, []);
 
   useEffect(() => {
+    // Claude Code sessions always use polling (no SSE stream available).
+    if (isClaude) {
+      const interval = window.setInterval(() => {
+        void reloadMessages(sessionId, { background: true });
+      }, 5000);
+
+      return () => {
+        window.clearInterval(interval);
+      };
+    }
+
     // Prefer SSE streaming of events when supported; fall back to polling otherwise.
     if (sseSupported === false) {
       const interval = window.setInterval(() => {
@@ -714,7 +730,7 @@ export const SessionDetailPage: React.FC<{
       source.removeEventListener("message", handleEvent as EventListener);
       source.close();
     };
-  }, [sessionId, sseSupported]);
+  }, [sessionId, sseSupported, isClaude]);
 
   const handleSubmit = async () => {
     const text = input.trim();
@@ -724,7 +740,7 @@ export const SessionDetailPage: React.FC<{
       setSubmitting(true);
       setSubmitError(null);
 
-      const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/prompt`, {
+      const res = await fetch(`${apiBase}/${encodeURIComponent(sessionId)}/prompt`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -748,7 +764,7 @@ export const SessionDetailPage: React.FC<{
 
   const createdAt = session ? getSessionCreatedAt(session) : null;
   const updatedAt = session ? getSessionUpdatedAt(session) : null;
-  const hasSubtasks = directChildren.length > 0;
+  const hasSubtasks = !isClaude && directChildren.length > 0;
   const titleLabel = session?.title || (session ? session.id.slice(0, 8) : "Session");
 
   return (

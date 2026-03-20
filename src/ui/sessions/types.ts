@@ -13,6 +13,7 @@ export type Session = {
   rootID?: string | null;
   parentId?: string | null;
   parentID?: string | null;
+  source?: "opencode" | "claude-code";
 };
 
 export type Project = {
