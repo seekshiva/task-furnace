@@ -14,6 +14,7 @@ import {
 import { formatDisplayDate, formatDisplayTimestamp } from "../date";
 import { Markdown } from "../Markdown";
 import { SessionCardHeader } from "./SessionCardHeader";
+import { sessionDetailPath } from "./sessionPaths";
 import type {
   Session,
   SessionMessage,
@@ -314,8 +315,8 @@ function ToolPartCard({
           session={taskSession}
           statusLabel={statusLabel}
           createdLabel={createdLabel ?? null}
-          onClick={() => navigate(`/sessions/${taskSession.id}`)}
-          buttonClassName="flex w-full items-start justify-between gap-3 text-left text-inherit"
+          onClick={() => navigate(sessionDetailPath(taskSession))}
+          className="flex w-full items-start justify-between gap-3 text-left text-inherit focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:focus-visible:outline-blue-400"
         />
       </div>
 
@@ -1244,8 +1245,8 @@ export const SessionDetailPage: React.FC<{
                                       session={child}
                                       statusLabel={statusLabel}
                                       createdLabel={createdLabel ?? null}
-                                      onClick={() => navigate(`/sessions/${child.id}`)}
-                                      buttonClassName="flex w-full items-start justify-between gap-3 text-left text-inherit"
+                                      onClick={() => navigate(sessionDetailPath(child))}
+                                      className="flex w-full items-start justify-between gap-3 text-left text-inherit focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:focus-visible:outline-blue-400"
                                     />
 
                                     {hasDirectAgents && (
@@ -1298,7 +1299,7 @@ export const SessionDetailPage: React.FC<{
                                                 key={agent.id}
                                                 type="button"
                                                 className="flex items-center justify-between gap-2 rounded-[12px] border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-left text-[12px] text-slate-700 dark:text-slate-300 transition hover:border-blue-200 dark:hover:border-blue-700 hover:bg-blue-50/60 dark:hover:bg-blue-950/40"
-                                                onClick={() => navigate(`/sessions/${agent.id}`)}
+                                                onClick={() => navigate(sessionDetailPath(agent))}
                                               >
                                                 <div className="min-w-0 flex-1">
                                                   <div className="truncate font-medium">
