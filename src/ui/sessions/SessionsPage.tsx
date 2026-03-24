@@ -5,6 +5,7 @@ import {
   normalizeSessionStatus,
   isActiveSessionStatus,
 } from "./types";
+import { getRawSessionStatusValue, isSessionDoneState } from "./sessionStatus";
 import { formatDisplayDate, formatDisplayTimestamp } from "../date";
 import type { Session, SessionStatusMap, SessionActivityMap } from "./types";
 import { SessionCardHeader } from "./SessionCardHeader";
@@ -39,7 +40,7 @@ const groupClassName =
 const groupHeaderButtonClassName =
   "sticky top-0 z-10 flex w-full shrink-0 items-center justify-between gap-3 bg-white/95 dark:bg-slate-900/95 px-3 py-2.5 text-left backdrop-blur-sm transition hover:bg-slate-50 dark:hover:bg-slate-800";
 
-type SessionColumnKey = "drafts" | "active" | "ready" | "done";
+type SessionColumnKey = "drafts" | "active" | "ready_done";
 
 type SessionGroupColumns = Record<SessionColumnKey, Session[]>;
 
@@ -70,16 +71,10 @@ const columnDefinitions: Array<{
     emptyMessage: "No active sessions.",
   },
   {
-    key: "ready",
-    title: "Ready",
-    description: "Idle sessions ready for input; not active right now.",
-    emptyMessage: "No ready sessions.",
-  },
-  {
-    key: "done",
+    key: "ready_done",
     title: "Done",
-    description: "Completed or closed sessions.",
-    emptyMessage: "No completed sessions.",
+    description: "Idle sessions ready for input, and completed or closed sessions.",
+    emptyMessage: "No sessions in Done.",
   },
 ];
 
@@ -166,16 +161,8 @@ function createEmptyColumns(): SessionGroupColumns {
   return {
     drafts: [],
     active: [],
-    ready: [],
-    done: [],
+    ready_done: [],
   };
-}
-
-function getRawSessionStatusValue(
-  session: Session,
-  statusEntry: SessionStatusMap[string] | undefined,
-): string | null {
-  return statusEntry?.type ?? statusEntry?.state ?? statusEntry?.status ?? session.status ?? null;
 }
 
 function getSessionColumnKey(
@@ -189,18 +176,13 @@ function getSessionColumnKey(
     return "drafts";
   }
 
-  if (
-    rawStatus === "done" ||
-    rawStatus === "complete" ||
-    rawStatus === "completed" ||
-    rawStatus === "closed"
-  ) {
-    return "done";
+  if (isSessionDoneState(session, statusEntry)) {
+    return "ready_done";
   }
 
   const isActiveFromActivity = activityEntry?.state === "active";
   const normalized = normalizeSessionStatus(session, statusEntry);
-  return isActiveFromActivity || isActiveSessionStatus(normalized) ? "active" : "ready";
+  return isActiveFromActivity || isActiveSessionStatus(normalized) ? "active" : "ready_done";
 }
 
 function mergeExpandedGroups(
@@ -693,7 +675,7 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
         const itemStatus = sessionStatus[item.id];
         const itemActivity = activity[item.id];
         const itemColumn = getSessionColumnKey(item, itemStatus, itemActivity);
-        if (itemColumn === "done") doneCount += 1;
+        if (isSessionDoneState(item, itemStatus)) doneCount += 1;
         if (itemColumn === "active") activeCount += 1;
       }
 
@@ -701,7 +683,9 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
         const childStatus = sessionStatus[child.id];
         const childActivity = activity[child.id];
         const childColumn = getSessionColumnKey(child, childStatus, childActivity);
-        if (childColumn === "ready") readyChildrenCount += 1;
+        if (childColumn === "ready_done" && !isSessionDoneState(child, childStatus)) {
+          readyChildrenCount += 1;
+        }
       }
 
       (group as SessionGroup & {
@@ -753,12 +737,24 @@ export const SessionsPage: React.FC<{ navigate: (path: string) => void }> = ({
 
     for (const group of groups) {
       for (const column of columnDefinitions) {
-        group.columns[column.key].sort((left, right) => {
-          return (
-            getSessionTimestamp(getSessionCreatedAt(right)) -
-            getSessionTimestamp(getSessionCreatedAt(left))
-          );
-        });
+        if (column.key === "ready_done") {
+          group.columns.ready_done.sort((left, right) => {
+            const leftDone = isSessionDoneState(left, sessionStatus[left.id]);
+            const rightDone = isSessionDoneState(right, sessionStatus[right.id]);
+            if (leftDone !== rightDone) return leftDone ? 1 : -1;
+            return (
+              getSessionTimestamp(getSessionCreatedAt(right)) -
+              getSessionTimestamp(getSessionCreatedAt(left))
+            );
+          });
+        } else {
+          group.columns[column.key].sort((left, right) => {
+            return (
+              getSessionTimestamp(getSessionCreatedAt(right)) -
+              getSessionTimestamp(getSessionCreatedAt(left))
+            );
+          });
+        }
       }
     }
 

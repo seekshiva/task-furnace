@@ -11,6 +11,7 @@ import {
   isTextPart,
   isToolPart,
 } from "./types";
+import { isSessionDoneState } from "./sessionStatus";
 import { formatDisplayDate, formatDisplayTimestamp } from "../date";
 import { Markdown } from "../Markdown";
 import { SessionCardHeader } from "./SessionCardHeader";
@@ -330,7 +331,7 @@ function ToolPartCard({
   );
 }
 
-type ChildColumnKey = "active" | "ready" | "done";
+type ChildColumnKey = "active" | "ready_done";
 
 const childColumnDefinitions: Array<{
   key: ChildColumnKey;
@@ -338,36 +339,25 @@ const childColumnDefinitions: Array<{
   emptyMessage: string;
 }> = [
   { key: "active", title: "Active", emptyMessage: "No active sub-tasks." },
-  { key: "ready", title: "Ready", emptyMessage: "No ready sub-tasks." },
-  { key: "done", title: "Done", emptyMessage: "No completed sub-tasks." },
+  {
+    key: "ready_done",
+    title: "Done",
+    emptyMessage: "No sub-tasks in Done.",
+  },
 ];
-
-function getRawSessionStatusValue(
-  session: Session,
-  statusEntry: SessionStatusMap[string] | undefined,
-): string | null {
-  return statusEntry?.type ?? statusEntry?.state ?? statusEntry?.status ?? session.status ?? null;
-}
 
 function getChildColumnKey(
   session: Session,
   statusEntry: SessionStatusMap[string] | undefined,
   activityEntry: SessionActivityMap[string] | undefined,
 ): ChildColumnKey {
-  const rawStatus = getRawSessionStatusValue(session, statusEntry)?.trim().toLowerCase() ?? null;
-
-  if (
-    rawStatus === "done" ||
-    rawStatus === "complete" ||
-    rawStatus === "completed" ||
-    rawStatus === "closed"
-  ) {
-    return "done";
+  if (isSessionDoneState(session, statusEntry)) {
+    return "ready_done";
   }
 
   const isActiveFromActivity = activityEntry?.state === "active";
   const normalized = normalizeSessionStatus(session, statusEntry);
-  return isActiveFromActivity || isActiveSessionStatus(normalized) ? "active" : "ready";
+  return isActiveFromActivity || isActiveSessionStatus(normalized) ? "active" : "ready_done";
 }
 
 function getChronologicalTimestamp(session: Session): number {
@@ -568,8 +558,7 @@ export const SessionDetailPage: React.FC<{
   const childColumns = useMemo(() => {
     const columns: Record<ChildColumnKey, Session[]> = {
       active: [],
-      ready: [],
-      done: [],
+      ready_done: [],
     };
 
     for (const child of directChildren) {
@@ -577,16 +566,24 @@ export const SessionDetailPage: React.FC<{
       columns[key].push(child);
     }
 
-    for (const key of Object.keys(columns) as ChildColumnKey[]) {
-      columns[key].sort((l, r) => getChronologicalTimestamp(l) - getChronologicalTimestamp(r));
-    }
+    columns.active.sort((l, r) => getChronologicalTimestamp(l) - getChronologicalTimestamp(r));
+    columns.ready_done.sort((l, r) => {
+      const lDone = isSessionDoneState(l, sessionStatus[l.id]);
+      const rDone = isSessionDoneState(r, sessionStatus[r.id]);
+      if (lDone !== rDone) return lDone ? 1 : -1;
+      return getChronologicalTimestamp(l) - getChronologicalTimestamp(r);
+    });
 
     return columns;
   }, [activity, directChildren, sessionStatus]);
 
-  const readyChildCount = childColumns.ready.length;
+  const readyChildCount = childColumns.ready_done.filter(
+    (c) => !isSessionDoneState(c, sessionStatus[c.id]),
+  ).length;
   const activeChildCount = childColumns.active.length;
-  const doneChildCount = childColumns.done.length;
+  const doneChildCount = childColumns.ready_done.filter((c) =>
+    isSessionDoneState(c, sessionStatus[c.id]),
+  ).length;
 
   async function reloadMessages(currentSessionId: string, opts?: { background?: boolean }) {
     const listEl = messageListRef.current;
@@ -838,7 +835,7 @@ export const SessionDetailPage: React.FC<{
               </div>
               {!loading && !error && session && (
                 <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {activeChildCount} active · {readyChildCount} ready
+                  {activeChildCount} active · {readyChildCount} ready · {doneChildCount} done
                 </div>
               )}
             </div>
@@ -996,7 +993,7 @@ export const SessionDetailPage: React.FC<{
                       </span>
                       <span className="min-w-0 flex-1 text-[12px] text-slate-600 dark:text-slate-400">
                         {directChildren.length} direct children · {activeChildCount} active ·{" "}
-                        {readyChildCount} ready
+                        {readyChildCount} ready · {doneChildCount} done
                       </span>
                     </div>
                   )}
